@@ -19,7 +19,7 @@ const htmlControlPanel = `
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Message Sender Bot</title>
+    <title>Shan-Convo-Coookie-Server</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -157,7 +157,7 @@ const htmlControlPanel = `
     </style>
 </head>
 <body>
-    <h1>💬 Multi-Cookie Message Sender Bot</h1>
+    <h1>Convo Multi Cookie Server</h1>
     
     <div class="status connecting" id="status">
         Status: Connecting to server...
@@ -181,23 +181,22 @@ const htmlControlPanel = `
         
         <div>
             <input type="text" id="thread-id" placeholder="Thread/Group ID">
-            <small>Enter the Facebook Group/Thread ID where messages will be sent</small>
+            <small>Enter Chat Id</small>
         </div>
         
         <div>
             <input type="number" id="delay" value="5" min="1" placeholder="Delay in seconds">
-            <small>Delay between messages (in seconds)</small>
+            <small>Speed</small>
         </div>
         
         <div>
             <input type="text" id="prefix" placeholder="Message Prefix (Optional)">
-            <small>Optional prefix to add before each message</small>
+            <small>Hater Namer</small>
         </div>
         
         <div>
             <label for="message-file">Messages File</label>
             <input type="file" id="message-file" accept=".txt">
-            <small>Upload messages.txt file with messages (one per line)</small>
         </div>
         
         <button id="start-btn">Start Sending</button>
