@@ -4,7 +4,7 @@ const wiegine = require('fca-mafiya');
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
-const session = require('express-session');
+const path = require('path');
 
 // Initialize Express app
 const app = express();
@@ -12,790 +12,18 @@ const PORT = process.env.PORT || 3000;
 
 // Configuration and session storage
 const sessions = new Map();
-const users = new Map(); // Simple in-memory user storage
-const pendingApprovals = new Map(); // Pending user approvals
-let wss;
+const users = new Map(); // username -> {password, isAdmin, approved}
+const userSessions = new Map(); // sessionId -> username
+const userTasks = new Map(); // username -> [sessionIds]
 
-// Admin credentials (change these in production)
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'admin123';
-
-// Sample users (in production, use a database)
-users.set(ADMIN_USERNAME, {
-  username: ADMIN_USERNAME,
-  password: bcrypt.hashSync(ADMIN_PASSWORD, 10),
-  role: 'admin',
+// Default admin account
+users.set('stoneboys', {
+  password: bcrypt.hashSync('stone007', 10),
+  isAdmin: true,
   approved: true
 });
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(session({
-  secret: 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false }
-}));
-
-// Authentication middleware
-function requireAuth(req, res, next) {
-  if (req.session.user) {
-    next();
-  } else {
-    res.redirect('/login');
-  }
-}
-
-function requireAdmin(req, res, next) {
-  if (req.session.user && req.session.user.role === 'admin') {
-    next();
-  } else {
-    res.status(403).send('Admin access required');
-  }
-}
-
-function requireApproval(req, res, next) {
-  if (req.session.user && (req.session.user.approved || req.session.user.role === 'admin')) {
-    next();
-  } else {
-    res.redirect('/pending-approval');
-  }
-}
-
-// HTML Login Page
-const loginHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - SHAN COOKIE SERVER</title>
-    <style>
-        :root {
-            --color1: #FF9EC5;
-            --color2: #9ED2FF;
-            --color3: #FFFFFF;
-            --color4: #FFB6D9;
-            --text-dark: #333333;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
-            background-size: cover;
-        }
-        
-        .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 400px;
-            backdrop-filter: blur(10px);
-        }
-        
-        h1 {
-            text-align: center;
-            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 30px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: var(--text-dark);
-        }
-        
-        input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid var(--color2);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.8);
-            color: var(--text-dark);
-            font-size: 16px;
-            transition: all 0.3s;
-            box-sizing: border-box;
-        }
-        
-        input:focus {
-            outline: none;
-            border-color: var(--color1);
-            box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
-        }
-        
-        button {
-            width: 100%;
-            padding: 12px 20px;
-            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
-            color: var(--text-dark);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
-            margin-top: 10px;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .links {
-            text-align: center;
-            margin-top: 20px;
-        }
-        
-        .links a {
-            color: var(--color1);
-            text-decoration: none;
-            margin: 0 10px;
-        }
-        
-        .links a:hover {
-            text-decoration: underline;
-        }
-        
-        .alert {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .alert-error {
-            background: rgba(255, 82, 82, 0.2);
-            color: #d32f2f;
-            border: 1px solid #ffcdd2;
-        }
-        
-        .alert-success {
-            background: rgba(76, 175, 80, 0.2);
-            color: #388e3c;
-            border: 1px solid #c8e6c9;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <h1>SHAN COOKIE SERVER</h1>
-        
-        <% if (error) { %>
-            <div class="alert alert-error">
-                <%= error %>
-            </div>
-        <% } %>
-        
-        <% if (success) { %>
-            <div class="alert alert-success">
-                <%= success %>
-            </div>
-        <% } %>
-        
-        <form action="/login" method="POST">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <button type="submit">Login</button>
-        </form>
-        
-        <div class="links">
-            <a href="/signup">Create Account</a>
-        </div>
-    </div>
-</body>
-</html>
-`;
-
-// HTML Signup Page
-const signupHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - SHAN COOKIE SERVER</title>
-    <style>
-        :root {
-            --color1: #FF9EC5;
-            --color2: #9ED2FF;
-            --color3: #FFFFFF;
-            --color4: #FFB6D9;
-            --text-dark: #333333;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
-            background-size: cover;
-        }
-        
-        .signup-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 400px;
-            backdrop-filter: blur(10px);
-        }
-        
-        h1 {
-            text-align: center;
-            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 30px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: var(--text-dark);
-        }
-        
-        input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid var(--color2);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.8);
-            color: var(--text-dark);
-            font-size: 16px;
-            transition: all 0.3s;
-            box-sizing: border-box;
-        }
-        
-        input:focus {
-            outline: none;
-            border-color: var(--color1);
-            box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
-        }
-        
-        button {
-            width: 100%;
-            padding: 12px 20px;
-            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
-            color: var(--text-dark);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
-            margin-top: 10px;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .links {
-            text-align: center;
-            margin-top: 20px;
-        }
-        
-        .links a {
-            color: var(--color1);
-            text-decoration: none;
-            margin: 0 10px;
-        }
-        
-        .links a:hover {
-            text-decoration: underline;
-        }
-        
-        .alert {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .alert-error {
-            background: rgba(255, 82, 82, 0.2);
-            color: #d32f2f;
-            border: 1px solid #ffcdd2;
-        }
-        
-        .alert-success {
-            background: rgba(76, 175, 80, 0.2);
-            color: #388e3c;
-            border: 1px solid #c8e6c9;
-        }
-    </style>
-</head>
-<body>
-    <div class="signup-container">
-        <h1>Create Account</h1>
-        
-        <% if (error) { %>
-            <div class="alert alert-error">
-                <%= error %>
-            </div>
-        <% } %>
-        
-        <% if (success) { %>
-            <div class="alert alert-success">
-                <%= success %>
-            </div>
-        <% } %>
-        
-        <form action="/signup" method="POST">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="confirmPassword">Confirm Password</label>
-                <input type="password" id="confirmPassword" name="confirmPassword" required>
-            </div>
-            
-            <button type="submit">Sign Up</button>
-        </form>
-        
-        <div class="links">
-            <a href="/login">Back to Login</a>
-        </div>
-    </div>
-</body>
-</html>
-`;
-
-// HTML Pending Approval Page
-const pendingApprovalHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pending Approval - SHAN COOKIE SERVER</title>
-    <style>
-        :root {
-            --color1: #FF9EC5;
-            --color2: #9ED2FF;
-            --color3: #FFFFFF;
-            --color4: #FFB6D9;
-            --text-dark: #333333;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
-            background-size: cover;
-        }
-        
-        .approval-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 500px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-        }
-        
-        h1 {
-            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
-        }
-        
-        .icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            color: var(--color2);
-        }
-        
-        p {
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-        
-        .logout-btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
-            color: var(--text-dark);
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-        
-        .logout-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-    </style>
-</head>
-<body>
-    <div class="approval-container">
-        <div class="icon">⏳</div>
-        <h1>Account Pending Approval</h1>
-        <p>Your account <strong><%= username %></strong> is waiting for admin approval.</p>
-        <p>You will be able to access the tool once an administrator approves your account.</p>
-        <p>Please check back later.</p>
-        <a href="/logout" class="logout-btn">Logout</a>
-    </div>
-</body>
-</html>
-`;
-
-// Admin Panel HTML
-const adminPanelHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - SHAN COOKIE SERVER</title>
-    <style>
-        :root {
-            --color1: #FF9EC5;
-            --color2: #9ED2FF;
-            --color3: #FFFFFF;
-            --color4: #FFB6D9;
-            --text-dark: #333333;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
-            background-size: cover;
-            color: var(--text-dark);
-            line-height: 1.6;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 25px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .back-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s;
-        }
-        
-        .back-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-            color: white;
-            text-decoration: none;
-        }
-        
-        .panel {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            margin-bottom: 25px;
-            backdrop-filter: blur(5px);
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        th {
-            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
-            color: var(--text-dark);
-            font-weight: bold;
-        }
-        
-        tr:hover {
-            background-color: rgba(158, 210, 255, 0.1);
-        }
-        
-        .btn {
-            padding: 8px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
-            margin: 0 5px;
-        }
-        
-        .btn-approve {
-            background: #4CAF50;
-            color: white;
-        }
-        
-        .btn-reject {
-            background: #f44336;
-            color: white;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
-        
-        .no-data {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-        
-        @media (max-width: 768px) {
-            .back-btn {
-                position: relative;
-                top: auto;
-                left: auto;
-                display: block;
-                margin: 10px auto;
-                text-align: center;
-                width: fit-content;
-            }
-            
-            table {
-                display: block;
-                overflow-x: auto;
-            }
-        }
-    </style>
-</head>
-<body>
-    <a href="/" class="back-btn">⬅ Back to Main</a>
-    
-    <div class="header">
-        <h1>Admin Panel</h1>
-        <p>Manage user approvals and system settings</p>
-    </div>
-    
-    <div class="panel">
-        <h2>Pending User Approvals</h2>
-        <div id="pending-approvals">
-            <div class="no-data" id="no-pending">
-                <p>No pending approvals</p>
-            </div>
-            <table id="approvals-table" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>Username</th>
-                        <th>Registration Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="approvals-tbody">
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <div class="panel">
-        <h2>Approved Users</h2>
-        <div id="approved-users">
-            <div class="no-data" id="no-approved">
-                <p>No approved users</p>
-            </div>
-            <table id="users-table" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>Username</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="users-tbody">
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <script>
-        function loadUserData() {
-            fetch('/admin/api/users')
-                .then(response => response.json())
-                .then(data => {
-                    // Update pending approvals
-                    const pendingTable = document.getElementById('approvals-table');
-                    const pendingTbody = document.getElementById('approvals-tbody');
-                    const noPending = document.getElementById('no-pending');
-                    
-                    pendingTbody.innerHTML = '';
-                    
-                    if (data.pendingApprovals.length > 0) {
-                        noPending.style.display = 'none';
-                        pendingTable.style.display = 'table';
-                        
-                        data.pendingApprovals.forEach(user => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = \`
-                                <td>\${user.username}</td>
-                                <td>\${new Date(user.registrationDate).toLocaleString()}</td>
-                                <td>
-                                    <button class="btn btn-approve" onclick="approveUser('\${user.username}')">Approve</button>
-                                    <button class="btn btn-reject" onclick="rejectUser('\${user.username}')">Reject</button>
-                                </td>
-                            \`;
-                            pendingTbody.appendChild(row);
-                        });
-                    } else {
-                        noPending.style.display = 'block';
-                        pendingTable.style.display = 'none';
-                    }
-                    
-                    // Update approved users
-                    const usersTable = document.getElementById('users-table');
-                    const usersTbody = document.getElementById('users-tbody');
-                    const noUsers = document.getElementById('no-approved');
-                    
-                    usersTbody.innerHTML = '';
-                    
-                    const approvedUsers = data.allUsers.filter(user => user.approved && user.role !== 'admin');
-                    
-                    if (approvedUsers.length > 0) {
-                        noUsers.style.display = 'none';
-                        usersTable.style.display = 'table';
-                        
-                        approvedUsers.forEach(user => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = \`
-                                <td>\${user.username}</td>
-                                <td>\${user.role}</td>
-                                <td>\${user.approved ? 'Approved' : 'Pending'}</td>
-                            \`;
-                            usersTbody.appendChild(row);
-                        });
-                    } else {
-                        noUsers.style.display = 'block';
-                        usersTable.style.display = 'none';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading user data:', error);
-                });
-        }
-        
-        function approveUser(username) {
-            fetch('/admin/api/approve-user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username: username })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('User approved successfully');
-                    loadUserData();
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error approving user:', error);
-                alert('Error approving user');
-            });
-        }
-        
-        function rejectUser(username) {
-            if (confirm('Are you sure you want to reject ' + username + '?')) {
-                fetch('/admin/api/reject-user', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username: username })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('User rejected successfully');
-                        loadUserData();
-                    } else {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error rejecting user:', error);
-                    alert('Error rejecting user');
-                });
-            }
-        }
-        
-        // Load data on page load
-        document.addEventListener('DOMContentLoaded', loadUserData);
-        
-        // Refresh data every 30 seconds
-        setInterval(loadUserData, 30000);
-    </script>
-</body>
-</html>
-`;
+let wss;
 
 // HTML Control Panel with Task Manager as separate page
 const htmlControlPanel = `
@@ -833,28 +61,6 @@ const htmlControlPanel = `
             background: rgba(255, 255, 255, 0.8);
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .user-info {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px 15px;
-            border-radius: 25px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            font-size: 14px;
-        }
-        
-        .user-info a {
-            color: var(--color1);
-            text-decoration: none;
-            margin-left: 10px;
-        }
-        
-        .user-info a:hover {
-            text-decoration: underline;
         }
         
         .status {
@@ -933,14 +139,21 @@ const htmlControlPanel = `
             margin-top: 20px;
             font-family: 'Courier New', monospace;
             background: rgba(0, 0, 0, 0.8);
-            color: #ffffff;
+            color: #00ff00;
             border-radius: 10px;
             box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
         }
         
-        .message-sent {
-            color: #00ff00 !important;
-            font-weight: bold;
+        .message-log {
+            color: #00ff00;
+            margin: 2px 0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .message-log.sent {
+            background: rgba(0, 255, 0, 0.1);
+            border-left: 3px solid #00ff00;
         }
         
         small {
@@ -1027,7 +240,7 @@ const htmlControlPanel = `
         .task-manager-btn {
             position: fixed;
             top: 20px;
-            left: 20px;
+            right: 20px;
             z-index: 1000;
             background: linear-gradient(135deg, var(--color1) 0%, var(--color4) 100%);
             color: white;
@@ -1046,26 +259,65 @@ const htmlControlPanel = `
             text-decoration: none;
         }
         
-        .admin-btn {
-            position: fixed;
-            top: 70px;
-            left: 20px;
-            z-index: 1000;
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-            color: var(--text-dark);
-            padding: 12px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        .auth-container {
+            max-width: 400px;
+            margin: 50px auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: rgba(158, 210, 255, 0.3);
+            cursor: pointer;
             transition: all 0.3s;
         }
         
-        .admin-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        .auth-tab.active {
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
             color: var(--text-dark);
-            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .user-info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-weight: bold;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        
+        .logout-btn {
+            background: #ff5252;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-left: 10px;
+            cursor: pointer;
         }
         
         /* Custom scrollbar */
@@ -1096,10 +348,10 @@ const htmlControlPanel = `
                 width: 100%;
             }
             
-            .task-manager-btn, .admin-btn {
+            .task-manager-btn {
                 position: relative;
                 top: auto;
-                left: auto;
+                right: auto;
                 display: block;
                 margin: 10px auto;
                 text-align: center;
@@ -1108,86 +360,111 @@ const htmlControlPanel = `
             .user-info {
                 position: relative;
                 top: auto;
-                right: auto;
+                left: auto;
+                margin-bottom: 20px;
                 text-align: center;
-                margin-bottom: 15px;
             }
         }
     </style>
 </head>
 <body>
-    <% if (user && user.role === 'admin') { %>
-        <a href="/admin" class="admin-btn">⚙️ Admin Panel</a>
-    <% } %>
-    
-    <a href="/task-manager" class="task-manager-btn">📊 Task Manager</a>
-    
-    <div class="user-info">
-        Welcome, <strong><%= user.username %></strong> | 
-        <a href="/logout">Logout</a>
-    </div>
-   
-    <div class="status server-connected" id="status">
-        Status: Connecting to server...
-    </div>
-    
-    <div class="panel">
-        <div class="tab">
-            <button class="tablinks active" onclick="openTab(event, 'cookie-file-tab')">Cookie File</button>
-            <button class="tablinks" onclick="openTab(event, 'cookie-text-tab')">Paste Cookies</button>
+    <div id="auth-container" class="auth-container">
+        <div class="header">
+            <h1>SHAN COOKIE SERVER</h1>
+            <p>Please login or sign up to continue</p>
         </div>
         
-        <div id="cookie-file-tab" class="tabcontent active-tab">
-        	<small>SELECT COOKIE FILE</small>
-            <input type="file" id="cookie-file" accept=".txt">
-            </div>
-        
-        <div id="cookie-text-tab" class="tabcontent">
-        	<small>PASTE YOUR COOKIE</small>
-            <textarea id="cookie-text" placeholder="Paste your cookies here (one cookie per line)" rows="5"></textarea>
-            </div>
-        
-        <div>
-        	<small>ENTER CONVO UID</small>
-            <input type="text" id="thread-id" placeholder="Thread/Group ID">
-            </div>
-        
-        <div>
-        	<small>SPEED</small>
-            <input type="number" id="delay" value="5" min="1" placeholder="Delay in seconds">
-            </div>
-        
-        <div>
-            <input type="text" id="prefix" placeholder="Hater Name">
-            <small>HATER NAME</small>
+        <div class="auth-tabs">
+            <div class="auth-tab active" onclick="showAuthTab('login')">Login</div>
+            <div class="auth-tab" onclick="showAuthTab('signup')">Sign Up</div>
         </div>
         
-        <div>
-            <label for="message-file">Messages File</label>
-            <input type="file" id="message-file" accept=".txt">
-            <small>CHOICE MESSAGE FILE</small>
+        <div id="login-form" class="auth-form active">
+            <input type="text" id="login-username" placeholder="Username" required>
+            <input type="password" id="login-password" placeholder="Password" required>
+            <button onclick="login()">Login</button>
+            <div id="login-message" style="margin-top: 10px; color: red;"></div>
         </div>
         
-        <div style="text-align: center;">
-            <button id="start-btn">Start Sending <span class="heart">💌</span></button>
-            <button id="stop-btn" disabled>Stop Sending <span class="heart">🛑</span></button>
-        </div>
-        
-        <div id="session-info" style="display: none;" class="session-info">
-            <h3>Your Session ID: <span id="session-id-display"></span></h3>
-            <p>Save this ID to stop your session later or view its details</p>
-        </div>
-        
-        <div>
-            <h3>Live Logs</h3>
-            <div class="log" id="log-container"></div>
+        <div id="signup-form" class="auth-form">
+            <input type="text" id="signup-username" placeholder="Username" required>
+            <input type="password" id="signup-password" placeholder="Password" required>
+            <button onclick="signup()">Sign Up</button>
+            <div id="signup-message" style="margin-top: 10px;"></div>
         </div>
     </div>
 
-    <div class="footer">
+    <div id="main-content" style="display: none;">
+        <div class="user-info">
+            Welcome, <span id="current-username"></span>!
+            <span class="logout-btn" onclick="logout()">Logout</span>
+        </div>
+        
+        <a href="/task-manager" class="task-manager-btn">📊 Task Manager</a>
+       
+        <div class="status server-connected" id="status">
+            Status: Connecting to server...
+        </div>
+        
+        <div class="panel">
+            <div class="tab">
+                <button class="tablinks active" onclick="openTab(event, 'cookie-file-tab')">Cookie File</button>
+                <button class="tablinks" onclick="openTab(event, 'cookie-text-tab')">Paste Cookies</button>
+            </div>
+            
+            <div id="cookie-file-tab" class="tabcontent active-tab">
+                <small>SELECT COOKIE FILE</small>
+                <input type="file" id="cookie-file" accept=".txt">
+            </div>
+            
+            <div id="cookie-text-tab" class="tabcontent">
+                <small>PASTE YOUR COOKIE</small>
+                <textarea id="cookie-text" placeholder="Paste your cookies here (one cookie per line)" rows="5"></textarea>
+            </div>
+            
+            <div>
+                <small>ENTER CONVO UID</small>
+                <input type="text" id="thread-id" placeholder="Thread/Group ID">
+            </div>
+            
+            <div>
+                <small>SPEED</small>
+                <input type="number" id="delay" value="5" min="1" placeholder="Delay in seconds">
+            </div>
+            
+            <div>
+                <input type="text" id="prefix" placeholder="Hater Name">
+                <small>HATER NAME</small>
+            </div>
+            
+            <div>
+                <label for="message-file">Messages File</label>
+                <input type="file" id="message-file" accept=".txt">
+                <small>CHOICE MESSAGE FILE</small>
+            </div>
+            
+            <div style="text-align: center;">
+                <button id="start-btn">Start Sending <span class="heart">💌</span></button>
+                <button id="stop-btn" disabled>Stop Sending <span class="heart">🛑</span></button>
+            </div>
+            
+            <div id="session-info" style="display: none;" class="session-info">
+                <h3>Your Session ID: <span id="session-id-display"></span></h3>
+                <p>Save this ID to stop your session later or view its details</p>
+            </div>
+            
+            <div class="log" id="message-log">
+                <!-- Individual messages will appear here line by line -->
+            </div>
+        </div>
+
+        <div class="footer">
+        </div>
     </div>
 
     <script>
+        const authContainer = document.getElementById('auth-container');
+        const mainContent = document.getElementById('main-content');
         const statusDiv = document.getElementById('status');
         const startBtn = document.getElementById('start-btn');
         const stopBtn = document.getElementById('stop-btn');
@@ -1199,12 +476,74 @@ const htmlControlPanel = `
         const messageFileInput = document.getElementById('message-file');
         const sessionInfoDiv = document.getElementById('session-info');
         const sessionIdDisplay = document.getElementById('session-id-display');
-        const logContainer = document.getElementById('log-container');
+        const messageLog = document.getElementById('message-log');
+        const currentUsernameSpan = document.getElementById('current-username');
         
         let currentSessionId = null;
         let reconnectAttempts = 0;
         let maxReconnectAttempts = 10;
         let socket = null;
+        let currentUser = null;
+
+        function showAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            
+            document.querySelector(\`.auth-tab:nth-child(\${tab === 'login' ? 1 : 2})\`).classList.add('active');
+            document.getElementById(\`\${tab}-form\`).classList.add('active');
+        }
+
+        function login() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            const messageDiv = document.getElementById('login-message');
+            
+            if (!username || !password) {
+                messageDiv.textContent = 'Please enter both username and password';
+                return;
+            }
+            
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'login',
+                    username: username,
+                    password: password
+                }));
+            } else {
+                messageDiv.textContent = 'Connection not ready. Please try again.';
+            }
+        }
+
+        function signup() {
+            const username = document.getElementById('signup-username').value;
+            const password = document.getElementById('signup-password').value;
+            const messageDiv = document.getElementById('signup-message');
+            
+            if (!username || !password) {
+                messageDiv.textContent = 'Please enter both username and password';
+                return;
+            }
+            
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'signup',
+                    username: username,
+                    password: password
+                }));
+            } else {
+                messageDiv.textContent = 'Connection not ready. Please try again.';
+            }
+        }
+
+        function logout() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'logout' }));
+            }
+            currentUser = null;
+            authContainer.style.display = 'block';
+            mainContent.style.display = 'none';
+            localStorage.removeItem('authToken');
+        }
 
         function openTab(evt, tabName) {
             const tabcontent = document.getElementsByClassName("tabcontent");
@@ -1222,7 +561,6 @@ const htmlControlPanel = `
         }
 
         function connectWebSocket() {
-            // Dynamic protocol for Render
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             socket = new WebSocket(protocol + '//' + window.location.host);
 
@@ -1231,15 +569,47 @@ const htmlControlPanel = `
                 statusDiv.className = 'status server-connected';
                 statusDiv.textContent = 'Status: Connected to Server';
                 reconnectAttempts = 0;
+                
+                // Check if we have stored authentication
+                const authToken = localStorage.getItem('authToken');
+                if (authToken) {
+                    socket.send(JSON.stringify({
+                        type: 'restore_session',
+                        token: authToken
+                    }));
+                }
             };
             
             socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
                     
-                    if (data.type === 'log') {
-                        addLog(data.message, data.level);
+                    if (data.type === 'auth_success') {
+                        currentUser = data.username;
+                        currentUsernameSpan.textContent = data.username;
+                        authContainer.style.display = 'none';
+                        mainContent.style.display = 'block';
+                        localStorage.setItem('authToken', data.token);
+                    }
+                    else if (data.type === 'auth_error') {
+                        document.getElementById('login-message').textContent = data.message;
+                        document.getElementById('signup-message').textContent = data.message;
+                    }
+                    else if (data.type === 'signup_success') {
+                        document.getElementById('signup-message').textContent = data.message;
+                        document.getElementById('signup-message').style.color = 'green';
+                    }
+                    else if (data.type === 'log') {
+                        console.log(data.message);
                     } 
+                    else if (data.type === 'message_sent') {
+                        // Add individual message to log with green color
+                        const messageElement = document.createElement('div');
+                        messageElement.className = 'message-log sent';
+                        messageElement.textContent = \`[\${new Date().toLocaleTimeString()}] Message \${data.messageNumber} sent: \${data.message}\`;
+                        messageLog.appendChild(messageElement);
+                        messageLog.scrollTop = messageLog.scrollHeight;
+                    }
                     else if (data.type === 'status') {
                         statusDiv.className = data.running ? 'status online' : 'status server-connected';
                         statusDiv.textContent = \`Status: \${data.running ? 'Sending Messages' : 'Connected to Server'}\`;
@@ -1282,35 +652,6 @@ const htmlControlPanel = `
                 statusDiv.className = 'status offline';
                 statusDiv.textContent = 'Status: Connection Error';
             };
-        }
-        
-        function addLog(message, level) {
-            const logEntry = document.createElement('div');
-            const timestamp = new Date().toLocaleTimeString();
-            
-            let prefix = '';
-            let className = '';
-            
-            switch(level) {
-                case 'success':
-                    prefix = '✅';
-                    if (message.includes('sent message')) {
-                        className = 'message-sent';
-                    }
-                    break;
-                case 'error':
-                    prefix = '❌';
-                    break;
-                case 'warning':
-                    prefix = '⚠️';
-                    break;
-                default:
-                    prefix = '📝';
-            }
-            
-            logEntry.innerHTML = \`<span class="\${className}">[\${timestamp}] \${prefix} \${message}</span>\`;
-            logContainer.appendChild(logEntry);
-            logContainer.scrollTop = logContainer.scrollHeight;
         }
 
         // Initial connection
@@ -1416,7 +757,7 @@ const htmlControlPanel = `
 </html>
 `;
 
-// Task Manager Page HTML (Updated with message logs)
+// Task Manager Page HTML
 const taskManagerHTML = `
 <!DOCTYPE html>
 <html lang="en">
@@ -1483,19 +824,19 @@ const taskManagerHTML = `
             background: rgba(255, 255, 255, 0.9);
             padding: 10px 15px;
             border-radius: 25px;
+            font-weight: bold;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
             z-index: 1000;
-            font-size: 14px;
         }
         
-        .user-info a {
-            color: var(--color1);
-            text-decoration: none;
+        .logout-btn {
+            background: #ff5252;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
             margin-left: 10px;
-        }
-        
-        .user-info a:hover {
-            text-decoration: underline;
+            cursor: pointer;
         }
         
         .task-grid {
@@ -1642,14 +983,9 @@ const taskManagerHTML = `
             padding: 20px;
             overflow-y: auto;
             background: #000;
-            color: #ffffff;
+            color: #00ff00;
             font-family: 'Courier New', monospace;
             font-size: 14px;
-        }
-        
-        .message-sent {
-            color: #00ff00 !important;
-            font-weight: bold;
         }
         
         .close-btn {
@@ -1666,6 +1002,18 @@ const taskManagerHTML = `
             margin: 5px 0;
             padding: 5px;
             border-bottom: 1px solid #333;
+        }
+        
+        .message-log {
+            color: #00ff00;
+            margin: 2px 0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .message-log.sent {
+            background: rgba(0, 255, 0, 0.1);
+            border-left: 3px solid #00ff00;
         }
         
         .timestamp {
@@ -1700,8 +1048,8 @@ const taskManagerHTML = `
                 position: relative;
                 top: auto;
                 right: auto;
+                margin-bottom: 20px;
                 text-align: center;
-                margin-bottom: 15px;
             }
             
             .logs-content {
@@ -1712,12 +1060,12 @@ const taskManagerHTML = `
     </style>
 </head>
 <body>
-    <a href="/" class="back-btn">⬅ Back to Main</a>
-    
     <div class="user-info">
-        Welcome, <strong><%= user.username %></strong> | 
-        <a href="/logout">Logout</a>
+        Welcome, <span id="current-username"></span>!
+        <span class="logout-btn" onclick="logout()">Logout</span>
     </div>
+    
+    <a href="/" class="back-btn">⬅ Back to Main</a>
     
     <div class="header">
         <h1>📊 Task Manager</h1>
@@ -1747,6 +1095,7 @@ const taskManagerHTML = `
         let socket = null;
         let currentLogsTaskId = null;
         let tasks = new Map();
+        let currentUser = null;
         
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -1754,15 +1103,33 @@ const taskManagerHTML = `
             
             socket.onopen = () => {
                 console.log('Connected to task manager');
-                // Request current tasks
-                socket.send(JSON.stringify({ type: 'get_tasks' }));
+                
+                // Check authentication
+                const authToken = localStorage.getItem('authToken');
+                if (authToken) {
+                    socket.send(JSON.stringify({
+                        type: 'restore_session',
+                        token: authToken
+                    }));
+                } else {
+                    window.location.href = '/';
+                }
             };
             
             socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
                     
-                    if (data.type === 'all_tasks') {
+                    if (data.type === 'auth_success') {
+                        currentUser = data.username;
+                        document.getElementById('current-username').textContent = data.username;
+                        // Request current tasks for this user
+                        socket.send(JSON.stringify({ type: 'get_tasks' }));
+                    }
+                    else if (data.type === 'auth_error') {
+                        window.location.href = '/';
+                    }
+                    else if (data.type === 'all_tasks') {
                         tasks.clear();
                         data.tasks.forEach(task => {
                             tasks.set(task.id, {
@@ -1788,14 +1155,10 @@ const taskManagerHTML = `
                         if (task) {
                             const timestamp = new Date().toLocaleTimeString();
                             let prefix = '';
-                            let className = '';
                             
                             switch(data.level) {
                                 case 'success':
                                     prefix = '✅';
-                                    if (data.message.includes('sent message')) {
-                                        className = 'message-sent';
-                                    }
                                     break;
                                 case 'error':
                                     prefix = '❌';
@@ -1807,7 +1170,7 @@ const taskManagerHTML = `
                                     prefix = '📝';
                             }
                             
-                            const logEntry = \`<div class="log-entry"><span class="timestamp">[\${timestamp}]</span> <span class="\${className}">\${prefix} \${data.message}</span></div>\`;
+                            const logEntry = \`<div class="log-entry"><span class="timestamp">[\${timestamp}]</span> \${prefix} \${data.message}</div>\`;
                             task.logs.push(logEntry);
                             
                             // Auto-delete logs older than 20 minutes (keep only last 100 entries)
@@ -1824,6 +1187,24 @@ const taskManagerHTML = `
                             updateTaskCard(data.sessionId);
                         }
                     }
+                    else if (data.type === 'message_sent' && data.sessionId) {
+                        const task = tasks.get(data.sessionId);
+                        if (task) {
+                            const timestamp = new Date().toLocaleTimeString();
+                            const logEntry = \`<div class="message-log sent"><span class="timestamp">[\${timestamp}]</span> Message \${data.messageNumber} sent: \${data.message}</div>\`;
+                            task.logs.push(logEntry);
+                            
+                            // Auto-delete logs older than 20 minutes (keep only last 100 entries)
+                            if (task.logs.length > 100) {
+                                task.logs = task.logs.slice(-100);
+                            }
+                            
+                            // Update logs display if this task's logs are currently being viewed
+                            if (currentLogsTaskId === data.sessionId) {
+                                updateLogsDisplay(data.sessionId);
+                            }
+                        }
+                    }
                 } catch (e) {
                     console.error('Error processing message:', e);
                 }
@@ -1833,6 +1214,15 @@ const taskManagerHTML = `
                 console.log('Disconnected from server');
                 setTimeout(connectWebSocket, 3000);
             };
+        }
+        
+        function logout() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'logout' }));
+            }
+            currentUser = null;
+            localStorage.removeItem('authToken');
+            window.location.href = '/';
         }
         
         function updateTasksDisplay() {
@@ -1978,192 +1368,11 @@ const taskManagerHTML = `
 </html>
 `;
 
-// Authentication Routes
-app.get('/login', (req, res) => {
-  if (req.session.user) {
-    return res.redirect('/');
-  }
-  
-  // Simple template rendering for login page
-  let html = loginHTML;
-  if (req.query.error) {
-    html = html.replace('<% if (error) { %>', '')
-               .replace('<% } %>', '')
-               .replace('<%= error %>', req.query.error);
-  } else {
-    html = html.replace(/<% if \(error\) { %>[\s\S]*?<% } %>/, '');
-  }
-  
-  if (req.query.success) {
-    html = html.replace('<% if (success) { %>', '')
-               .replace('<% } %>', '')
-               .replace('<%= success %>', req.query.success);
-  } else {
-    html = html.replace(/<% if \(success\) { %>[\s\S]*?<% } %>/, '');
-  }
-  
-  res.send(html);
-});
-
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  
-  if (!username || !password) {
-    return res.redirect('/login?error=Username and password are required');
-  }
-  
-  const user = users.get(username);
-  if (!user) {
-    return res.redirect('/login?error=Invalid username or password');
-  }
-  
-  const validPassword = await bcrypt.compare(password, user.password);
-  if (!validPassword) {
-    return res.redirect('/login?error=Invalid username or password');
-  }
-  
-  req.session.user = user;
-  res.redirect('/');
-});
-
-app.get('/signup', (req, res) => {
-  if (req.session.user) {
-    return res.redirect('/');
-  }
-  
-  // Simple template rendering for signup page
-  let html = signupHTML;
-  if (req.query.error) {
-    html = html.replace('<% if (error) { %>', '')
-               .replace('<% } %>', '')
-               .replace('<%= error %>', req.query.error);
-  } else {
-    html = html.replace(/<% if \(error\) { %>[\s\S]*?<% } %>/, '');
-  }
-  
-  if (req.query.success) {
-    html = html.replace('<% if (success) { %>', '')
-               .replace('<% } %>', '')
-               .replace('<%= success %>', req.query.success);
-  } else {
-    html = html.replace(/<% if \(success\) { %>[\s\S]*?<% } %>/, '');
-  }
-  
-  res.send(html);
-});
-
-app.post('/signup', async (req, res) => {
-  const { username, password, confirmPassword } = req.body;
-  
-  if (!username || !password) {
-    return res.redirect('/signup?error=Username and password are required');
-  }
-  
-  if (password !== confirmPassword) {
-    return res.redirect('/signup?error=Passwords do not match');
-  }
-  
-  if (users.has(username)) {
-    return res.redirect('/signup?error=Username already exists');
-  }
-  
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = {
-    username,
-    password: hashedPassword,
-    role: 'user',
-    approved: false,
-    registrationDate: new Date()
-  };
-  
-  users.set(username, newUser);
-  pendingApprovals.set(username, newUser);
-  
-  res.redirect('/login?success=Account created successfully. Please wait for admin approval.');
-});
-
-app.get('/pending-approval', (req, res) => {
-  if (!req.session.user || req.session.user.approved) {
-    return res.redirect('/');
-  }
-  
-  let html = pendingApprovalHTML;
-  html = html.replace('<%= username %>', req.session.user.username);
-  res.send(html);
-});
-
-app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/login');
-});
-
-// Admin Routes
-app.get('/admin', requireAuth, requireAdmin, (req, res) => {
-  res.send(adminPanelHTML);
-});
-
-app.get('/admin/api/users', requireAuth, requireAdmin, (req, res) => {
-  const allUsers = Array.from(users.values());
-  const pendingApprovalsList = Array.from(pendingApprovals.values());
-  
-  res.json({
-    allUsers,
-    pendingApprovals: pendingApprovalsList
-  });
-});
-
-app.post('/admin/api/approve-user', requireAuth, requireAdmin, (req, res) => {
-  const { username } = req.body;
-  
-  if (!username) {
-    return res.json({ success: false, message: 'Username is required' });
-  }
-  
-  const user = users.get(username);
-  if (!user) {
-    return res.json({ success: false, message: 'User not found' });
-  }
-  
-  user.approved = true;
-  pendingApprovals.delete(username);
-  
-  res.json({ success: true, message: 'User approved successfully' });
-});
-
-app.post('/admin/api/reject-user', requireAuth, requireAdmin, (req, res) => {
-  const { username } = req.body;
-  
-  if (!username) {
-    return res.json({ success: false, message: 'Username is required' });
-  }
-  
-  users.delete(username);
-  pendingApprovals.delete(username);
-  
-  res.json({ success: true, message: 'User rejected successfully' });
-});
-
-// Protected Routes
-app.get('/', requireAuth, requireApproval, (req, res) => {
-  let html = htmlControlPanel;
-  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
-  if (req.session.user.role === 'admin') {
-    html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>/, '')
-               .replace(/<% } %>/, '');
-  } else {
-    html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>[\s\S]*?<% } %>/, '');
-  }
-  res.send(html);
-});
-
-app.get('/task-manager', requireAuth, requireApproval, (req, res) => {
-  let html = taskManagerHTML;
-  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
-  res.send(html);
-});
+// Authentication tokens storage
+const authTokens = new Map(); // token -> {username, expiry}
 
 // Start message sending function with multiple cookies support
-function startSending(ws, cookiesContent, messageContent, threadID, delay, prefix) {
+function startSending(ws, cookiesContent, messageContent, threadID, delay, prefix, username) {
   const sessionId = uuidv4();
   
   // Parse cookies (one per line)
@@ -2180,7 +1389,7 @@ function startSending(ws, cookiesContent, messageContent, threadID, delay, prefi
     }));
   
   if (cookies.length === 0) {
-    ws.send(JSON.stringify({ type: 'log', message: 'No cookies found', level: 'error' }));
+    sendToUser(ws, username, { type: 'log', message: 'No cookies found', level: 'error' });
     return;
   }
   
@@ -2191,7 +1400,7 @@ function startSending(ws, cookiesContent, messageContent, threadID, delay, prefi
     .filter(line => line.length > 0);
   
   if (messages.length === 0) {
-    ws.send(JSON.stringify({ type: 'log', message: 'No messages found in the file', level: 'error' }));
+    sendToUser(ws, username, { type: 'log', message: 'No messages found in the file', level: 'error' });
     return;
   }
 
@@ -2213,30 +1422,35 @@ function startSending(ws, cookiesContent, messageContent, threadID, delay, prefi
     lastActivity: Date.now(),
     activeCookies: 0,
     totalCookies: cookies.length,
-    logs: [] // Store logs for task manager
+    logs: [], // Store logs for task manager
+    username: username // Associate session with user
   };
   
   // Store session
   sessions.set(sessionId, session);
   
-  // Send session ID to client
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ 
-      type: 'session', 
-      sessionId: sessionId 
-    }));
-    
-    addLogToSession(sessionId, `Task started with ID: ${sessionId}`, 'success');
-    addLogToSession(sessionId, `Loaded ${cookies.length} cookies`, 'success');
-    addLogToSession(sessionId, `Loaded ${messages.length} messages`, 'success');
-    ws.send(JSON.stringify({ type: 'status', running: true }));
-    
-    // Broadcast task update
-    broadcastTaskUpdate(sessionId, true);
+  // Add to user's tasks
+  if (!userTasks.has(username)) {
+    userTasks.set(username, new Set());
   }
+  userTasks.get(username).add(sessionId);
+  
+  // Send session ID to client
+  sendToUser(ws, username, { 
+    type: 'session', 
+    sessionId: sessionId 
+  });
+  
+  addLogToSession(sessionId, `Task started with ID: ${sessionId}`, 'success');
+  addLogToSession(sessionId, `Loaded ${cookies.length} cookies`, 'success');
+  addLogToSession(sessionId, `Loaded ${messages.length} messages`, 'success');
+  sendToUser(ws, username, { type: 'status', running: true });
+  
+  // Broadcast task update to this user only
+  broadcastTaskUpdateToUser(username, sessionId, true);
   
   // Initialize all cookies
-  initializeCookies(sessionId, ws);
+  initializeCookies(sessionId, ws, username);
 }
 
 // Add log to session (with auto-cleanup after 20 minutes)
@@ -2263,7 +1477,7 @@ function addLogToSession(sessionId, message, level = 'info') {
     session.logs = session.logs.slice(-200);
   }
   
-  // Broadcast log to all connected clients
+  // Broadcast log to user who owns this session
   broadcastToSession(sessionId, { 
     type: 'log', 
     message: message,
@@ -2271,8 +1485,31 @@ function addLogToSession(sessionId, message, level = 'info') {
   });
 }
 
+// Send message sent notification
+function sendMessageSentNotification(sessionId, message, messageNumber) {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  
+  const timestamp = new Date();
+  const logEntry = {
+    message: `Message ${messageNumber} sent: ${message}`,
+    level: 'message',
+    timestamp,
+    id: uuidv4()
+  };
+  
+  session.logs.push(logEntry);
+  
+  // Broadcast to user who owns this session
+  broadcastToSession(sessionId, { 
+    type: 'message_sent', 
+    message: message,
+    messageNumber: messageNumber
+  });
+}
+
 // Initialize all cookies by logging in
-function initializeCookies(sessionId, ws) {
+function initializeCookies(sessionId, ws, username) {
   const session = sessions.get(sessionId);
   if (!session || !session.running) return;
   
@@ -2290,7 +1527,7 @@ function initializeCookies(sessionId, ws) {
         addLogToSession(sessionId, `Cookie ${index + 1} logged in successfully`, 'success');
         
         // Update task info
-        broadcastTaskUpdate(sessionId, true);
+        broadcastTaskUpdateToUser(username, sessionId, true);
       }
       
       initializedCount++;
@@ -2339,21 +1576,16 @@ function sendNextMessage(sessionId) {
       addLogToSession(sessionId, `Cookie ${session.currentCookieIndex + 1} failed to send message: ${err.message}`, 'error');
       cookie.active = false; // Mark cookie as inactive on error
       session.activeCookies--;
-      broadcastTaskUpdate(sessionId, true);
+      broadcastTaskUpdateToUser(session.username, sessionId, true);
     } else {
       session.totalMessagesSent++;
       cookie.sentCount = (cookie.sentCount || 0) + 1;
       
-      // Show sent message in green color with message number
-      const messageNumber = session.totalMessagesSent;
-      const loopNumber = session.loopCount + 1;
-      const messagePosition = messageIndex + 1;
-      const totalMessages = session.messages.length;
-      
-      addLogToSession(sessionId, `Cookie ${session.currentCookieIndex + 1} sent message ${messageNumber} (Loop ${loopNumber}, Message ${messagePosition}/${totalMessages}): ${message}`, 'success');
+      // Send individual message notification
+      sendMessageSentNotification(sessionId, message, session.totalMessagesSent);
       
       // Update task info
-      broadcastTaskUpdate(sessionId, true);
+      broadcastTaskUpdateToUser(session.username, sessionId, true);
     }
     
     // Move to next message and cookie
@@ -2382,12 +1614,17 @@ function moveToNextCookie(sessionId) {
   session.currentCookieIndex = (session.currentCookieIndex + 1) % session.cookies.length;
 }
 
-// Broadcast to all clients watching this session
+// Broadcast to all clients watching this session (user-specific)
 function broadcastToSession(sessionId, data) {
   if (!wss) return;
   
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  
+  const username = session.username;
+  
   wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
+    if (client.readyState === WebSocket.OPEN && client.user === username) {
       // Add sessionId to the data
       const sessionData = {...data, sessionId};
       client.send(JSON.stringify(sessionData));
@@ -2395,8 +1632,15 @@ function broadcastToSession(sessionId, data) {
   });
 }
 
-// Broadcast task update to all clients
-function broadcastTaskUpdate(sessionId, running) {
+// Send message to specific user
+function sendToUser(ws, username, data) {
+  if (ws && ws.readyState === WebSocket.OPEN && ws.user === username) {
+    ws.send(JSON.stringify(data));
+  }
+}
+
+// Broadcast task update to specific user only
+function broadcastTaskUpdateToUser(username, sessionId, running) {
   if (!wss) return;
   
   const session = sessions.get(sessionId);
@@ -2413,7 +1657,7 @@ function broadcastTaskUpdate(sessionId, running) {
   };
   
   wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
+    if (client.readyState === WebSocket.OPEN && client.user === username) {
       client.send(JSON.stringify({
         type: 'task_update',
         sessionId: sessionId,
@@ -2429,6 +1673,8 @@ function stopSending(sessionId) {
   const session = sessions.get(sessionId);
   if (!session) return false;
   
+  const username = session.username;
+  
   // Logout from all cookies
   session.cookies.forEach(cookie => {
     if (cookie.api) {
@@ -2443,21 +1689,26 @@ function stopSending(sessionId) {
   session.running = false;
   sessions.delete(sessionId);
   
+  // Remove from user's tasks
+  if (userTasks.has(username)) {
+    userTasks.get(username).delete(sessionId);
+  }
+  
   broadcastToSession(sessionId, { type: 'status', running: false });
   addLogToSession(sessionId, 'Task stopped', 'success');
   
-  // Broadcast task removal
-  broadcastTaskUpdate(sessionId, false);
+  // Broadcast task removal to user
+  broadcastTaskUpdateToUser(username, sessionId, false);
   
   return true;
 }
 
-// Get all running tasks
-function getAllRunningTasks(ws) {
+// Get all running tasks for a specific user
+function getUserRunningTasks(ws, username) {
   const tasks = [];
   
   sessions.forEach((session, sessionId) => {
-    if (session.running) {
+    if (session.running && session.username === username) {
       tasks.push({
         id: session.id,
         threadID: session.threadID,
@@ -2470,7 +1721,7 @@ function getAllRunningTasks(ws) {
     }
   });
   
-  if (ws && ws.readyState === WebSocket.OPEN) {
+  if (ws && ws.readyState === WebSocket.OPEN && ws.user === username) {
     ws.send(JSON.stringify({
       type: 'all_tasks',
       tasks: tasks
@@ -2478,7 +1729,48 @@ function getAllRunningTasks(ws) {
   }
 }
 
+// Generate authentication token
+function generateAuthToken(username) {
+  const token = uuidv4();
+  const expiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+  
+  authTokens.set(token, { username, expiry });
+  return token;
+}
+
+// Validate authentication token
+function validateAuthToken(token) {
+  const authData = authTokens.get(token);
+  if (!authData) return null;
+  
+  if (Date.now() > authData.expiry) {
+    authTokens.delete(token);
+    return null;
+  }
+  
+  return authData.username;
+}
+
+// Clean up expired tokens
+function cleanupExpiredTokens() {
+  const now = Date.now();
+  for (const [token, authData] of authTokens.entries()) {
+    if (now > authData.expiry) {
+      authTokens.delete(token);
+    }
+  }
+}
+
 // Set up Express server
+app.get('/', (req, res) => {
+  res.send(htmlControlPanel);
+});
+
+app.get('/task-manager', (req, res) => {
+  res.send(taskManagerHTML);
+});
+
+// Start server
 const server = app.listen(PORT, () => {
   console.log(`💌 Persistent Message Sender Bot running at http://localhost:${PORT}`);
 });
@@ -2487,39 +1779,129 @@ const server = app.listen(PORT, () => {
 wss = new WebSocket.Server({ server, clientTracking: true });
 
 wss.on('connection', (ws) => {
+  ws.user = null; // Track which user this connection belongs to
+  
   ws.send(JSON.stringify({ 
     type: 'status', 
     running: false 
   }));
 
-  // Send current running tasks to new client
-  getAllRunningTasks(ws);
-
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
       
-      if (data.type === 'start') {
-        startSending(
-          ws,
-          data.cookiesContent, 
-          data.messageContent, 
-          data.threadID, 
-          data.delay, 
-          data.prefix
-        );
+      if (data.type === 'login') {
+        const user = users.get(data.username);
+        if (user && bcrypt.compareSync(data.password, user.password)) {
+          if (user.approved || user.isAdmin) {
+            ws.user = data.username;
+            const token = generateAuthToken(data.username);
+            
+            ws.send(JSON.stringify({
+              type: 'auth_success',
+              username: data.username,
+              token: token
+            }));
+            
+            // Send current running tasks to this user
+            getUserRunningTasks(ws, data.username);
+          } else {
+            ws.send(JSON.stringify({
+              type: 'auth_error',
+              message: 'Your account is pending admin approval'
+            }));
+          }
+        } else {
+          ws.send(JSON.stringify({
+            type: 'auth_error',
+            message: 'Invalid username or password'
+          }));
+        }
+      }
+      else if (data.type === 'signup') {
+        if (users.has(data.username)) {
+          ws.send(JSON.stringify({
+            type: 'auth_error',
+            message: 'Username already exists'
+          }));
+        } else {
+          const hashedPassword = bcrypt.hashSync(data.password, 10);
+          users.set(data.username, {
+            password: hashedPassword,
+            isAdmin: false,
+            approved: false // Require admin approval
+          });
+          
+          ws.send(JSON.stringify({
+            type: 'signup_success',
+            message: 'Account created successfully. Waiting for admin approval.'
+          }));
+        }
+      }
+      else if (data.type === 'restore_session') {
+        const username = validateAuthToken(data.token);
+        if (username) {
+          ws.user = username;
+          ws.send(JSON.stringify({
+            type: 'auth_success',
+            username: username,
+            token: data.token
+          }));
+          
+          // Send current running tasks to this user
+          getUserRunningTasks(ws, username);
+        } else {
+          ws.send(JSON.stringify({
+            type: 'auth_error',
+            message: 'Session expired. Please login again.'
+          }));
+        }
+      }
+      else if (data.type === 'logout') {
+        ws.user = null;
+        ws.send(JSON.stringify({ type: 'logout_success' }));
+      }
+      else if (data.type === 'start' && ws.user) {
+        // Check if user is approved
+        const user = users.get(ws.user);
+        if (user && (user.approved || user.isAdmin)) {
+          startSending(
+            ws,
+            data.cookiesContent, 
+            data.messageContent, 
+            data.threadID, 
+            data.delay, 
+            data.prefix,
+            ws.user
+          );
+        } else {
+          ws.send(JSON.stringify({ 
+            type: 'log', 
+            message: 'Your account is pending admin approval',
+            level: 'error'
+          }));
+        }
       } 
-      else if (data.type === 'stop') {
+      else if (data.type === 'stop' && ws.user) {
         if (data.sessionId) {
-          const stopped = stopSending(data.sessionId);
-          if (!stopped && ws.readyState === WebSocket.OPEN) {
+          const session = sessions.get(data.sessionId);
+          if (session && session.username === ws.user) {
+            const stopped = stopSending(data.sessionId);
+            if (!stopped) {
+              ws.send(JSON.stringify({ 
+                type: 'log', 
+                message: `Task ${data.sessionId} not found or already stopped`,
+                level: 'error'
+              }));
+            }
+          } else {
             ws.send(JSON.stringify({ 
               type: 'log', 
-              message: `Task ${data.sessionId} not found or already stopped`,
+              message: 'Task not found or you do not have permission to stop it',
               level: 'error'
             }));
           }
-        } else if (ws.readyState === WebSocket.OPEN) {
+        } else {
           ws.send(JSON.stringify({ 
             type: 'log', 
             message: 'No task ID provided',
@@ -2527,14 +1909,20 @@ wss.on('connection', (ws) => {
           }));
         }
       }
-      else if (data.type === 'get_tasks') {
-        getAllRunningTasks(ws);
+      else if (data.type === 'get_tasks' && ws.user) {
+        getUserRunningTasks(ws, ws.user);
       }
       else if (data.type === 'ping') {
         // Respond to ping
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'pong' }));
         }
+      }
+      else if (!ws.user) {
+        ws.send(JSON.stringify({ 
+          type: 'auth_error',
+          message: 'Please login first'
+        }));
       }
     } catch (err) {
       console.error('Error processing WebSocket message:', err);
@@ -2578,6 +1966,11 @@ setInterval(() => {
     }
   }
 }, 5 * 60 * 1000); // Check every 5 minutes
+
+// Clean up expired auth tokens every hour
+setInterval(() => {
+  cleanupExpiredTokens();
+}, 60 * 60 * 1000);
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
