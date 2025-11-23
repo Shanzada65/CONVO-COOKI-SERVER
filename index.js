@@ -63,14 +63,14 @@ function requireApproval(req, res, next) {
   }
 }
 
-// HTML Login Page
-const loginHTML = `
+// HTML Admin Login Page
+const adminLoginHTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - SHAN COOKIE SERVER</title>
+    <title>Admin Login - SHAN COOKIE SERVER</title>
     <style>
         :root {
             --color1: #FF9EC5;
@@ -193,7 +193,7 @@ const loginHTML = `
 </head>
 <body>
     <div class="login-container">
-        <h1>SHAN COOKIE SERVER</h1>
+        <h1>ADMIN LOGIN</h1>
         
         <% if (error) { %>
             <div class="alert alert-error">
@@ -207,7 +207,7 @@ const loginHTML = `
             </div>
         <% } %>
         
-        <form action="/login" method="POST">
+        <form action="/admin-login" method="POST">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required>
@@ -218,25 +218,193 @@ const loginHTML = `
                 <input type="password" id="password" name="password" required>
             </div>
             
-            <button type="submit">Login</button>
+            <button type="submit">Admin Login</button>
         </form>
         
         <div class="links">
-            <a href="/signup">Create Account</a>
+            <a href="/user-login">User Login</a>
+            <a href="/user-signup">User Signup</a>
         </div>
     </div>
 </body>
 </html>
 `;
 
-// HTML Signup Page
-const signupHTML = `
+// HTML User Login Page
+const userLoginHTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - SHAN COOKIE SERVER</title>
+    <title>User Login - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--color2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-dark);
+            font-size: 16px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--color1);
+            box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .links a {
+            color: var(--color1);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        
+        .links a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .alert-error {
+            background: rgba(255, 82, 82, 0.2);
+            color: #d32f2f;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .alert-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #388e3c;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>USER LOGIN</h1>
+        
+        <% if (error) { %>
+            <div class="alert alert-error">
+                <%= error %>
+            </div>
+        <% } %>
+        
+        <% if (success) { %>
+            <div class="alert alert-success">
+                <%= success %>
+            </div>
+        <% } %>
+        
+        <form action="/user-login" method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit">User Login</button>
+        </form>
+        
+        <div class="links">
+            <a href="/admin-login">Admin Login</a>
+            <a href="/user-signup">Create Account</a>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+// HTML User Signup Page
+const userSignupHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Sign Up - SHAN COOKIE SERVER</title>
     <style>
         :root {
             --color1: #FF9EC5;
@@ -359,7 +527,7 @@ const signupHTML = `
 </head>
 <body>
     <div class="signup-container">
-        <h1>Create Account</h1>
+        <h1>Create User Account</h1>
         
         <% if (error) { %>
             <div class="alert alert-error">
@@ -373,7 +541,7 @@ const signupHTML = `
             </div>
         <% } %>
         
-        <form action="/signup" method="POST">
+        <form action="/user-signup" method="POST">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required>
@@ -393,7 +561,8 @@ const signupHTML = `
         </form>
         
         <div class="links">
-            <a href="/login">Back to Login</a>
+            <a href="/admin-login">Admin Login</a>
+            <a href="/user-login">User Login</a>
         </div>
     </div>
 </body>
@@ -597,6 +766,11 @@ const adminPanelHTML = `
             color: white;
         }
         
+        .btn-remove {
+            background: #ff9800;
+            color: white;
+        }
+        
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
@@ -666,6 +840,7 @@ const adminPanelHTML = `
                         <th>Username</th>
                         <th>Role</th>
                         <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="users-tbody">
@@ -726,6 +901,10 @@ const adminPanelHTML = `
                                 <td>\${user.username}</td>
                                 <td>\${user.role}</td>
                                 <td>\${user.approved ? 'Approved' : 'Pending'}</td>
+                                <td>
+                                    <button class="btn btn-reject" onclick="revokeUser('\${user.username}')">Revoke</button>
+                                    <button class="btn btn-remove" onclick="removeUser('\${user.username}')">Remove</button>
+                                </td>
                             \`;
                             usersTbody.appendChild(row);
                         });
@@ -783,6 +962,56 @@ const adminPanelHTML = `
                 .catch(error => {
                     console.error('Error rejecting user:', error);
                     alert('Error rejecting user');
+                });
+            }
+        }
+        
+        function revokeUser(username) {
+            if (confirm('Are you sure you want to revoke ' + username + '?')) {
+                fetch('/admin/api/revoke-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: username })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('User revoked successfully');
+                        loadUserData();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error revoking user:', error);
+                    alert('Error revoking user');
+                });
+            }
+        }
+        
+        function removeUser(username) {
+            if (confirm('Are you sure you want to remove ' + username + '? This action cannot be undone.')) {
+                fetch('/admin/api/remove-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: username })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('User removed successfully');
+                        loadUserData();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error removing user:', error);
+                    alert('Error removing user');
                 });
             }
         }
@@ -925,42 +1154,6 @@ const htmlControlPanel = `
             box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
         }
         
-        .log {
-            height: 300px;
-            overflow-y: auto;
-            border: 2px solid var(--color2);
-            padding: 15px;
-            margin-top: 20px;
-            font-family: 'Courier New', monospace;
-            background: rgba(0, 0, 0, 0.8);
-            color: #ffffff;
-            border-radius: 10px;
-            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
-        }
-        
-        .message-sent {
-            color: #00ff00 !important;
-            font-weight: bold;
-        }
-        
-        small {
-            color: #666;
-            font-size: 13px;
-        }
-        
-        h1, h2, h3 {
-            color: var(--text-dark);
-            margin-top: 0;
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: inline-block;
-        }
-        
         .session-info {
             background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
             padding: 15px;
@@ -1068,6 +1261,50 @@ const htmlControlPanel = `
             text-decoration: none;
         }
         
+        .cookie-checker-btn {
+            position: fixed;
+            top: 120px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, #00C853 0%, #64DD17 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .cookie-checker-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .group-fetcher-btn {
+            position: fixed;
+            top: 170px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, #9C27B0 0%, #E040FB 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .group-fetcher-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
         /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
@@ -1096,7 +1333,7 @@ const htmlControlPanel = `
                 width: 100%;
             }
             
-            .task-manager-btn, .admin-btn {
+            .task-manager-btn, .admin-btn, .cookie-checker-btn, .group-fetcher-btn {
                 position: relative;
                 top: auto;
                 left: auto;
@@ -1121,6 +1358,8 @@ const htmlControlPanel = `
     <% } %>
     
     <a href="/task-manager" class="task-manager-btn">📊 Task Manager</a>
+    <a href="/cookie-checker" class="cookie-checker-btn">🔍 Cookie Checker</a>
+    <a href="/group-fetcher" class="group-fetcher-btn">👥 Group Fetcher</a>
     
     <div class="user-info">
         Welcome, <strong><%= user.username %></strong> | 
@@ -1177,11 +1416,6 @@ const htmlControlPanel = `
             <h3>Your Session ID: <span id="session-id-display"></span></h3>
             <p>Save this ID to stop your session later or view its details</p>
         </div>
-        
-        <div>
-            <h3>Live Logs</h3>
-            <div class="log" id="log-container"></div>
-        </div>
     </div>
 
     <div class="footer">
@@ -1199,7 +1433,6 @@ const htmlControlPanel = `
         const messageFileInput = document.getElementById('message-file');
         const sessionInfoDiv = document.getElementById('session-info');
         const sessionIdDisplay = document.getElementById('session-id-display');
-        const logContainer = document.getElementById('log-container');
         
         let currentSessionId = null;
         let reconnectAttempts = 0;
@@ -1237,10 +1470,7 @@ const htmlControlPanel = `
                 try {
                     const data = JSON.parse(event.data);
                     
-                    if (data.type === 'log') {
-                        addLog(data.message, data.level);
-                    } 
-                    else if (data.type === 'status') {
+                    if (data.type === 'status') {
                         statusDiv.className = data.running ? 'status online' : 'status server-connected';
                         statusDiv.textContent = \`Status: \${data.running ? 'Sending Messages' : 'Connected to Server'}\`;
                         startBtn.disabled = data.running;
@@ -1282,35 +1512,6 @@ const htmlControlPanel = `
                 statusDiv.className = 'status offline';
                 statusDiv.textContent = 'Status: Connection Error';
             };
-        }
-        
-        function addLog(message, level) {
-            const logEntry = document.createElement('div');
-            const timestamp = new Date().toLocaleTimeString();
-            
-            let prefix = '';
-            let className = '';
-            
-            switch(level) {
-                case 'success':
-                    prefix = '✅';
-                    if (message.includes('sent message')) {
-                        className = 'message-sent';
-                    }
-                    break;
-                case 'error':
-                    prefix = '❌';
-                    break;
-                case 'warning':
-                    prefix = '⚠️';
-                    break;
-                default:
-                    prefix = '📝';
-            }
-            
-            logEntry.innerHTML = \`<span class="\${className}">[\${timestamp}] \${prefix} \${message}</span>\`;
-            logContainer.appendChild(logEntry);
-            logContainer.scrollTop = logContainer.scrollHeight;
         }
 
         // Initial connection
@@ -1369,7 +1570,8 @@ const htmlControlPanel = `
                         messageContent,
                         threadID,
                         delay,
-                        prefix
+                        prefix,
+                        username: '<%= user.username %>'
                     }));
                 } else {
                     alert('Connection not ready. Please try again.');
@@ -1416,7 +1618,719 @@ const htmlControlPanel = `
 </html>
 `;
 
-// Task Manager Page HTML (Updated with message logs)
+// Cookie Checker Page HTML
+const cookieCheckerHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Checker - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 14px;
+        }
+        
+        .user-info a {
+            color: var(--color1);
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        
+        .user-info a:hover {
+            text-decoration: underline;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+            backdrop-filter: blur(5px);
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--color2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-dark);
+            font-size: 16px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--color1);
+            box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
+        }
+        
+        button {
+            padding: 12px 20px;
+            margin: 8px;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: bold;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .results {
+            margin-top: 20px;
+        }
+        
+        .cookie-result {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 5px solid var(--color2);
+            transition: all 0.3s;
+        }
+        
+        .cookie-result:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .cookie-valid {
+            border-left-color: #4CAF50;
+        }
+        
+        .cookie-invalid {
+            border-left-color: #f44336;
+        }
+        
+        .cookie-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .cookie-info img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .cookie-details {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status-valid {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .status-invalid {
+            background: #f44336;
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(158, 210, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid var(--color1);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .back-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+                width: fit-content;
+            }
+            
+            .user-info {
+                position: relative;
+                top: auto;
+                right: auto;
+                text-align: center;
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">⬅ Back to Main</a>
+    
+    <div class="user-info">
+        Welcome, <strong><%= user.username %></strong> | 
+        <a href="/logout">Logout</a>
+    </div>
+    
+    <div class="header">
+        <h1>🔍 Cookie Checker</h1>
+        <p>Check your Facebook cookies line by line for validity</p>
+    </div>
+    
+    <div class="panel">
+        <h2>Paste Your Cookies</h2>
+        <p>Enter one cookie per line to check their validity:</p>
+        <textarea id="cookies-input" placeholder="Paste your cookies here (one cookie per line)" rows="10"></textarea>
+        <div style="text-align: center; margin-top: 15px;">
+            <button id="check-btn">Check Cookies</button>
+        </div>
+        
+        <div id="results" class="results" style="display: none;">
+            <h3>Results</h3>
+            <div id="results-container"></div>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Checking cookies, please wait...</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('check-btn').addEventListener('click', async () => {
+            const cookiesInput = document.getElementById('cookies-input').value.trim();
+            const resultsDiv = document.getElementById('results');
+            const resultsContainer = document.getElementById('results-container');
+            const loadingDiv = document.getElementById('loading');
+            
+            if (!cookiesInput) {
+                alert('Please enter some cookies to check');
+                return;
+            }
+            
+            const cookies = cookiesInput.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+            
+            if (cookies.length === 0) {
+                alert('No valid cookies found');
+                return;
+            }
+            
+            // Show loading
+            loadingDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            resultsContainer.innerHTML = '';
+            
+            try {
+                const response = await fetch('/check-cookies', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cookies })
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading
+                loadingDiv.style.display = 'none';
+                resultsDiv.style.display = 'block';
+                
+                if (data.success) {
+                    data.results.forEach((result, index) => {
+                        const resultDiv = document.createElement('div');
+                        resultDiv.className = \`cookie-result \${result.valid ? 'cookie-valid' : 'cookie-invalid'}\`;
+                        
+                        let content = \`
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h4>Cookie #\${index + 1}</h4>
+                                <span class="status-badge \${result.valid ? 'status-valid' : 'status-invalid'}">
+                                    \${result.valid ? 'VALID' : 'INVALID'}
+                                </span>
+                            </div>
+                        \`;
+                        
+                        if (result.valid && result.userInfo) {
+                            content += \`
+                                <div class="cookie-info">
+                                    <img src="\${result.userInfo.profilePic || 'https://via.placeholder.com/50'}" alt="Profile" onerror="this.src='https://via.placeholder.com/50'">
+                                    <div class="cookie-details">
+                                        <strong>\${result.userInfo.name || 'Unknown User'}</strong>
+                                        <small>UID: \${result.userInfo.uid || 'N/A'}</small>
+                                    </div>
+                                </div>
+                            \`;
+                        } else {
+                            content += \`<p>\${result.error || 'Cookie is invalid'}</p>\`;
+                        }
+                        
+                        resultDiv.innerHTML = content;
+                        resultsContainer.appendChild(resultDiv);
+                    });
+                } else {
+                    resultsContainer.innerHTML = \`<div class="cookie-result cookie-invalid"><p>Error: \${data.message}</p></div>\`;
+                }
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                resultsContainer.innerHTML = \`<div class="cookie-result cookie-invalid"><p>Error checking cookies: \${error.message}</p></div>\`;
+                resultsDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
+`;
+
+// Group Fetcher Page HTML
+const groupFetcherHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Fetcher - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 14px;
+        }
+        
+        .user-info a {
+            color: var(--color1);
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        
+        .user-info a:hover {
+            text-decoration: underline;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+            backdrop-filter: blur(5px);
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--color2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-dark);
+            font-size: 16px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--color1);
+            box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
+        }
+        
+        button {
+            padding: 12px 20px;
+            margin: 8px;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: bold;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .results {
+            margin-top: 20px;
+        }
+        
+        .group-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .group-item {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 5px solid var(--color1);
+            transition: all 0.3s;
+        }
+        
+        .group-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .group-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .group-info img {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+        
+        .group-details {
+            flex: 1;
+        }
+        
+        .group-details h4 {
+            margin: 0 0 5px 0;
+            color: var(--text-dark);
+        }
+        
+        .group-details p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .group-uid {
+            background: var(--color2);
+            color: var(--text-dark);
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(158, 210, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid var(--color1);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .copy-btn {
+            background: var(--color1);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .copy-btn:hover {
+            background: var(--color4);
+        }
+        
+        @media (max-width: 768px) {
+            .back-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+                width: fit-content;
+            }
+            
+            .user-info {
+                position: relative;
+                top: auto;
+                right: auto;
+                text-align: center;
+                margin-bottom: 15px;
+            }
+            
+            .group-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">⬅ Back to Main</a>
+    
+    <div class="user-info">
+        Welcome, <strong><%= user.username %></strong> | 
+        <a href="/logout">Logout</a>
+    </div>
+    
+    <div class="header">
+        <h1>👥 Group Fetcher</h1>
+        <p>Fetch all groups from your Facebook account using cookies</p>
+    </div>
+    
+    <div class="panel">
+        <h2>Enter Your Cookie</h2>
+        <p>Paste your Facebook cookie to fetch your groups:</p>
+        <textarea id="cookie-input" placeholder="Paste your Facebook cookie here" rows="6"></textarea>
+        <div style="text-align: center; margin-top: 15px;">
+            <button id="fetch-btn">Fetch Groups</button>
+        </div>
+        
+        <div id="results" class="results" style="display: none;">
+            <h3>Your Groups</h3>
+            <div id="results-container" class="group-list"></div>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Fetching groups, please wait...</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('fetch-btn').addEventListener('click', async () => {
+            const cookieInput = document.getElementById('cookie-input').value.trim();
+            const resultsDiv = document.getElementById('results');
+            const resultsContainer = document.getElementById('results-container');
+            const loadingDiv = document.getElementById('loading');
+            
+            if (!cookieInput) {
+                alert('Please enter a cookie');
+                return;
+            }
+            
+            // Show loading
+            loadingDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            resultsContainer.innerHTML = '';
+            
+            try {
+                const response = await fetch('/fetch-groups', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cookie: cookieInput })
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading
+                loadingDiv.style.display = 'none';
+                resultsDiv.style.display = 'block';
+                
+                if (data.success && data.groups) {
+                    if (data.groups.length === 0) {
+                        resultsContainer.innerHTML = '<p>No groups found or you are not a member of any groups.</p>';
+                    } else {
+                        data.groups.forEach(group => {
+                            const groupDiv = document.createElement('div');
+                            groupDiv.className = 'group-item';
+                            
+                            groupDiv.innerHTML = \`
+                                <div class="group-info">
+                                    <img src="\${group.imageURL || 'https://via.placeholder.com/60'}" alt="\${group.name}" onerror="this.src='https://via.placeholder.com/60'">
+                                    <div class="group-details">
+                                        <h4>\${group.name}</h4>
+                                        <p>\${group.participantCount ? group.participantCount + ' members' : 'Members count not available'}</p>
+                                        <div class="group-uid">UID: \${group.threadID}</div>
+                                        <button class="copy-btn" onclick="copyToClipboard('\${group.threadID}')">Copy UID</button>
+                                    </div>
+                                </div>
+                            \`;
+                            
+                            resultsContainer.appendChild(groupDiv);
+                        });
+                    }
+                } else {
+                    resultsContainer.innerHTML = \`<p>Error: \${data.message || 'Failed to fetch groups'}</p>\`;
+                }
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                resultsContainer.innerHTML = \`<p>Error fetching groups: \${error.message}</p>\`;
+                resultsDiv.style.display = 'block';
+            }
+        });
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Group UID copied to clipboard: ' + text);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+</body>
+</html>
+`;
+
+// Task Manager Page HTML (Updated with user-specific tasks and live logs)
 const taskManagerHTML = `
 <!DOCTYPE html>
 <html lang="en">
@@ -1633,7 +2547,7 @@ const taskManagerHTML = `
             color: white;
             border-radius: 15px 15px 0 0;
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
         }
         
@@ -1721,7 +2635,7 @@ const taskManagerHTML = `
     
     <div class="header">
         <h1>📊 Task Manager</h1>
-        <p>Monitor and manage all running tasks</p>
+        <p>Monitor and manage your running tasks</p>
     </div>
     
     <div id="tasks-container">
@@ -1754,15 +2668,18 @@ const taskManagerHTML = `
             
             socket.onopen = () => {
                 console.log('Connected to task manager');
-                // Request current tasks
-                socket.send(JSON.stringify({ type: 'get_tasks' }));
+                // Request current tasks for this user only
+                socket.send(JSON.stringify({ 
+                    type: 'get_my_tasks',
+                    username: '<%= user.username %>'
+                }));
             };
             
             socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
                     
-                    if (data.type === 'all_tasks') {
+                    if (data.type === 'my_tasks') {
                         tasks.clear();
                         data.tasks.forEach(task => {
                             tasks.set(task.id, {
@@ -1772,7 +2689,7 @@ const taskManagerHTML = `
                         });
                         updateTasksDisplay();
                     }
-                    else if (data.type === 'task_update') {
+                    else if (data.type === 'task_update' && data.task.owner === '<%= user.username %>') {
                         if (data.running) {
                             tasks.set(data.sessionId, {
                                 ...data.task,
@@ -1970,7 +2887,10 @@ const taskManagerHTML = `
         // Refresh tasks every 5 seconds to get updated stats
         setInterval(() => {
             if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'get_tasks' }));
+                socket.send(JSON.stringify({ 
+                    type: 'get_my_tasks',
+                    username: '<%= user.username %>'
+                }));
             }
         }, 5000);
     </script>
@@ -1979,13 +2899,12 @@ const taskManagerHTML = `
 `;
 
 // Authentication Routes
-app.get('/login', (req, res) => {
+app.get('/admin-login', (req, res) => {
   if (req.session.user) {
     return res.redirect('/');
   }
   
-  // Simple template rendering for login page
-  let html = loginHTML;
+  let html = adminLoginHTML;
   if (req.query.error) {
     html = html.replace('<% if (error) { %>', '')
                .replace('<% } %>', '')
@@ -2005,34 +2924,33 @@ app.get('/login', (req, res) => {
   res.send(html);
 });
 
-app.post('/login', async (req, res) => {
+app.post('/admin-login', async (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
-    return res.redirect('/login?error=Username and password are required');
+    return res.redirect('/admin-login?error=Username and password are required');
   }
   
   const user = users.get(username);
-  if (!user) {
-    return res.redirect('/login?error=Invalid username or password');
+  if (!user || user.role !== 'admin') {
+    return res.redirect('/admin-login?error=Invalid admin credentials');
   }
   
   const validPassword = await bcrypt.compare(password, user.password);
   if (!validPassword) {
-    return res.redirect('/login?error=Invalid username or password');
+    return res.redirect('/admin-login?error=Invalid admin credentials');
   }
   
   req.session.user = user;
   res.redirect('/');
 });
 
-app.get('/signup', (req, res) => {
+app.get('/user-login', (req, res) => {
   if (req.session.user) {
     return res.redirect('/');
   }
   
-  // Simple template rendering for signup page
-  let html = signupHTML;
+  let html = userLoginHTML;
   if (req.query.error) {
     html = html.replace('<% if (error) { %>', '')
                .replace('<% } %>', '')
@@ -2052,19 +2970,65 @@ app.get('/signup', (req, res) => {
   res.send(html);
 });
 
-app.post('/signup', async (req, res) => {
+app.post('/user-login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.redirect('/user-login?error=Username and password are required');
+  }
+  
+  const user = users.get(username);
+  if (!user) {
+    return res.redirect('/user-login?error=Invalid username or password');
+  }
+  
+  const validPassword = await bcrypt.compare(password, user.password);
+  if (!validPassword) {
+    return res.redirect('/user-login?error=Invalid username or password');
+  }
+  
+  req.session.user = user;
+  res.redirect('/');
+});
+
+app.get('/user-signup', (req, res) => {
+  if (req.session.user) {
+    return res.redirect('/');
+  }
+  
+  let html = userSignupHTML;
+  if (req.query.error) {
+    html = html.replace('<% if (error) { %>', '')
+               .replace('<% } %>', '')
+               .replace('<%= error %>', req.query.error);
+  } else {
+    html = html.replace(/<% if \(error\) { %>[\s\S]*?<% } %>/, '');
+  }
+  
+  if (req.query.success) {
+    html = html.replace('<% if (success) { %>', '')
+               .replace('<% } %>', '')
+               .replace('<%= success %>', req.query.success);
+  } else {
+    html = html.replace(/<% if \(success\) { %>[\s\S]*?<% } %>/, '');
+  }
+  
+  res.send(html);
+});
+
+app.post('/user-signup', async (req, res) => {
   const { username, password, confirmPassword } = req.body;
   
   if (!username || !password) {
-    return res.redirect('/signup?error=Username and password are required');
+    return res.redirect('/user-signup?error=Username and password are required');
   }
   
   if (password !== confirmPassword) {
-    return res.redirect('/signup?error=Passwords do not match');
+    return res.redirect('/user-signup?error=Passwords do not match');
   }
   
   if (users.has(username)) {
-    return res.redirect('/signup?error=Username already exists');
+    return res.redirect('/user-signup?error=Username already exists');
   }
   
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -2079,7 +3043,7 @@ app.post('/signup', async (req, res) => {
   users.set(username, newUser);
   pendingApprovals.set(username, newUser);
   
-  res.redirect('/login?success=Account created successfully. Please wait for admin approval.');
+  res.redirect('/user-login?success=Account created successfully. Please wait for admin approval.');
 });
 
 app.get('/pending-approval', (req, res) => {
@@ -2094,7 +3058,7 @@ app.get('/pending-approval', (req, res) => {
 
 app.get('/logout', (req, res) => {
   req.session.destroy();
-  res.redirect('/login');
+  res.redirect('/user-login');
 });
 
 // Admin Routes
@@ -2143,6 +3107,140 @@ app.post('/admin/api/reject-user', requireAuth, requireAdmin, (req, res) => {
   res.json({ success: true, message: 'User rejected successfully' });
 });
 
+app.post('/admin/api/revoke-user', requireAuth, requireAdmin, (req, res) => {
+  const { username } = req.body;
+  
+  if (!username) {
+    return res.json({ success: false, message: 'Username is required' });
+  }
+  
+  const user = users.get(username);
+  if (!user) {
+    return res.json({ success: false, message: 'User not found' });
+  }
+  
+  user.approved = false;
+  pendingApprovals.set(username, user);
+  
+  res.json({ success: true, message: 'User revoked successfully' });
+});
+
+app.post('/admin/api/remove-user', requireAuth, requireAdmin, (req, res) => {
+  const { username } = req.body;
+  
+  if (!username) {
+    return res.json({ success: false, message: 'Username is required' });
+  }
+  
+  if (username === ADMIN_USERNAME) {
+    return res.json({ success: false, message: 'Cannot remove admin user' });
+  }
+  
+  users.delete(username);
+  pendingApprovals.delete(username);
+  
+  // Also stop any tasks owned by this user
+  for (const [sessionId, session] of sessions.entries()) {
+    if (session.owner === username) {
+      stopSending(sessionId);
+    }
+  }
+  
+  res.json({ success: true, message: 'User removed successfully' });
+});
+
+// Cookie Checker Route
+app.post('/check-cookies', requireAuth, requireApproval, async (req, res) => {
+  const { cookies } = req.body;
+  
+  if (!cookies || !Array.isArray(cookies)) {
+    return res.json({ success: false, message: 'Invalid cookies data' });
+  }
+  
+  const results = [];
+  
+  for (const cookie of cookies) {
+    try {
+      const userInfo = await new Promise((resolve) => {
+        wiegine.login(cookie, {}, (err, api) => {
+          if (err || !api) {
+            resolve({ valid: false, error: err?.message || err });
+          } else {
+            // Get user info
+            api.getUserInfo(api.getCurrentUserID(), (err, user) => {
+              if (err) {
+                api.logout();
+                resolve({ valid: true, userInfo: null });
+              } else {
+                const currentUserID = api.getCurrentUserID();
+                const userData = user[currentUserID];
+                api.logout();
+                resolve({
+                  valid: true,
+                  userInfo: {
+                    name: userData?.name || 'Unknown',
+                    uid: currentUserID,
+                    profilePic: userData?.profilePic || null
+                  }
+                });
+              }
+            });
+          }
+        });
+      });
+      
+      results.push(userInfo);
+    } catch (error) {
+      results.push({ valid: false, error: error.message });
+    }
+  }
+  
+  res.json({ success: true, results });
+});
+
+// Group Fetcher Route
+app.post('/fetch-groups', requireAuth, requireApproval, async (req, res) => {
+  const { cookie } = req.body;
+  
+  if (!cookie) {
+    return res.json({ success: false, message: 'Cookie is required' });
+  }
+  
+  try {
+    const groups = await new Promise((resolve) => {
+      wiegine.login(cookie, {}, (err, api) => {
+        if (err || !api) {
+          resolve({ success: false, error: err?.message || err });
+        } else {
+          // Get thread list (groups)
+          api.getThreadList(100, null, [], (err, threads) => {
+            if (err) {
+              api.logout();
+              resolve({ success: false, error: err.message });
+            } else {
+              const groupThreads = threads.filter(thread => 
+                thread.threadID && thread.isGroup === true
+              ).map(thread => ({
+                threadID: thread.threadID,
+                name: thread.name || 'Unknown Group',
+                participantCount: thread.participantCount,
+                imageURL: thread.imageSrc || null
+              }));
+              
+              api.logout();
+              resolve({ success: true, groups: groupThreads });
+            }
+          });
+        }
+      });
+    });
+    
+    res.json(groups);
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+});
+
 // Protected Routes
 app.get('/', requireAuth, requireApproval, (req, res) => {
   let html = htmlControlPanel;
@@ -2162,8 +3260,20 @@ app.get('/task-manager', requireAuth, requireApproval, (req, res) => {
   res.send(html);
 });
 
+app.get('/cookie-checker', requireAuth, requireApproval, (req, res) => {
+  let html = cookieCheckerHTML;
+  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
+  res.send(html);
+});
+
+app.get('/group-fetcher', requireAuth, requireApproval, (req, res) => {
+  let html = groupFetcherHTML;
+  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
+  res.send(html);
+});
+
 // Start message sending function with multiple cookies support
-function startSending(ws, cookiesContent, messageContent, threadID, delay, prefix) {
+function startSending(ws, cookiesContent, messageContent, threadID, delay, prefix, username) {
   const sessionId = uuidv4();
   
   // Parse cookies (one per line)
@@ -2213,7 +3323,8 @@ function startSending(ws, cookiesContent, messageContent, threadID, delay, prefi
     lastActivity: Date.now(),
     activeCookies: 0,
     totalCookies: cookies.length,
-    logs: [] // Store logs for task manager
+    logs: [], // Store logs for task manager
+    owner: username // Track which user owns this task
   };
   
   // Store session
@@ -2267,7 +3378,8 @@ function addLogToSession(sessionId, message, level = 'info') {
   broadcastToSession(sessionId, { 
     type: 'log', 
     message: message,
-    level: level
+    level: level,
+    sessionId: sessionId
   });
 }
 
@@ -2388,9 +3500,7 @@ function broadcastToSession(sessionId, data) {
   
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      // Add sessionId to the data
-      const sessionData = {...data, sessionId};
-      client.send(JSON.stringify(sessionData));
+      client.send(JSON.stringify(data));
     }
   });
 }
@@ -2409,7 +3519,8 @@ function broadcastTaskUpdate(sessionId, running) {
     activeCookies: session.activeCookies,
     totalCookies: session.totalCookies,
     startTime: session.startTime,
-    running: running
+    running: running,
+    owner: session.owner
   };
   
   wss.clients.forEach(client => {
@@ -2422,6 +3533,33 @@ function broadcastTaskUpdate(sessionId, running) {
       }));
     }
   });
+}
+
+// Get tasks for specific user
+function getUserTasks(username, ws) {
+  const userTasks = [];
+  
+  sessions.forEach((session, sessionId) => {
+    if (session.running && session.owner === username) {
+      userTasks.push({
+        id: session.id,
+        threadID: session.threadID,
+        totalMessagesSent: session.totalMessagesSent,
+        activeCookies: session.activeCookies,
+        totalCookies: session.totalCookies,
+        startTime: session.startTime,
+        running: true,
+        owner: session.owner
+      });
+    }
+  });
+  
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'my_tasks',
+      tasks: userTasks
+    }));
+  }
 }
 
 // Stop specific session
@@ -2452,32 +3590,6 @@ function stopSending(sessionId) {
   return true;
 }
 
-// Get all running tasks
-function getAllRunningTasks(ws) {
-  const tasks = [];
-  
-  sessions.forEach((session, sessionId) => {
-    if (session.running) {
-      tasks.push({
-        id: session.id,
-        threadID: session.threadID,
-        totalMessagesSent: session.totalMessagesSent,
-        activeCookies: session.activeCookies,
-        totalCookies: session.totalCookies,
-        startTime: session.startTime,
-        running: true
-      });
-    }
-  });
-  
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({
-      type: 'all_tasks',
-      tasks: tasks
-    }));
-  }
-}
-
 // Set up Express server
 const server = app.listen(PORT, () => {
   console.log(`💌 Persistent Message Sender Bot running at http://localhost:${PORT}`);
@@ -2492,9 +3604,6 @@ wss.on('connection', (ws) => {
     running: false 
   }));
 
-  // Send current running tasks to new client
-  getAllRunningTasks(ws);
-
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
@@ -2506,7 +3615,8 @@ wss.on('connection', (ws) => {
           data.messageContent, 
           data.threadID, 
           data.delay, 
-          data.prefix
+          data.prefix,
+          data.username
         );
       } 
       else if (data.type === 'stop') {
@@ -2527,8 +3637,8 @@ wss.on('connection', (ws) => {
           }));
         }
       }
-      else if (data.type === 'get_tasks') {
-        getAllRunningTasks(ws);
+      else if (data.type === 'get_my_tasks') {
+        getUserTasks(data.username, ws);
       }
       else if (data.type === 'ping') {
         // Respond to ping
