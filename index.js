@@ -17,8 +17,8 @@ const pendingApprovals = new Map(); // Pending user approvals
 let wss;
 
 // Admin credentials (change these in production)
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'admin123';
+const ADMIN_USERNAME = 'thewstones57@gmail.com';
+const ADMIN_PASSWORD = '@#(SH9N)#@';
 
 // Sample users (in production, use a database)
 users.set(ADMIN_USERNAME, {
