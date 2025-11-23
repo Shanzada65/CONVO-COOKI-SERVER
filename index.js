@@ -3,6 +3,8 @@ const express = require('express');
 const wiegine = require('fca-mafiya');
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
+const bcrypt = require('bcrypt');
+const session = require('express-session');
 
 // Initialize Express app
 const app = express();
@@ -10,16 +12,799 @@ const PORT = process.env.PORT || 3000;
 
 // Configuration and session storage
 const sessions = new Map();
+const users = new Map(); // Simple in-memory user storage
+const pendingApprovals = new Map(); // Pending user approvals
 let wss;
 
-// HTML Control Panel with session management
+// Admin credentials (change these in production)
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD = 'admin123';
+
+// Sample users (in production, use a database)
+users.set(ADMIN_USERNAME, {
+  username: ADMIN_USERNAME,
+  password: bcrypt.hashSync(ADMIN_PASSWORD, 10),
+  role: 'admin',
+  approved: true
+});
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(session({
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false }
+}));
+
+// Authentication middleware
+function requireAuth(req, res, next) {
+  if (req.session.user) {
+    next();
+  } else {
+    res.redirect('/login');
+  }
+}
+
+function requireAdmin(req, res, next) {
+  if (req.session.user && req.session.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).send('Admin access required');
+  }
+}
+
+function requireApproval(req, res, next) {
+  if (req.session.user && (req.session.user.approved || req.session.user.role === 'admin')) {
+    next();
+  } else {
+    res.redirect('/pending-approval');
+  }
+}
+
+// HTML Login Page
+const loginHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--color2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-dark);
+            font-size: 16px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--color1);
+            box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .links a {
+            color: var(--color1);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        
+        .links a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .alert-error {
+            background: rgba(255, 82, 82, 0.2);
+            color: #d32f2f;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .alert-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #388e3c;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>SHAN COOKIE SERVER</h1>
+        
+        <% if (error) { %>
+            <div class="alert alert-error">
+                <%= error %>
+            </div>
+        <% } %>
+        
+        <% if (success) { %>
+            <div class="alert alert-success">
+                <%= success %>
+            </div>
+        <% } %>
+        
+        <form action="/login" method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit">Login</button>
+        </form>
+        
+        <div class="links">
+            <a href="/signup">Create Account</a>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+// HTML Signup Page
+const signupHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        .signup-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--color2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-dark);
+            font-size: 16px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--color1);
+            box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .links a {
+            color: var(--color1);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        
+        .links a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .alert-error {
+            background: rgba(255, 82, 82, 0.2);
+            color: #d32f2f;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .alert-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #388e3c;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <h1>Create Account</h1>
+        
+        <% if (error) { %>
+            <div class="alert alert-error">
+                <%= error %>
+            </div>
+        <% } %>
+        
+        <% if (success) { %>
+            <div class="alert alert-success">
+                <%= success %>
+            </div>
+        <% } %>
+        
+        <form action="/signup" method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required>
+            </div>
+            
+            <button type="submit">Sign Up</button>
+        </form>
+        
+        <div class="links">
+            <a href="/login">Back to Login</a>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+// HTML Pending Approval Page
+const pendingApprovalHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pending Approval - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        .approval-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+        
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: var(--color2);
+        }
+        
+        p {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .logout-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="approval-container">
+        <div class="icon">⏳</div>
+        <h1>Account Pending Approval</h1>
+        <p>Your account <strong><%= username %></strong> is waiting for admin approval.</p>
+        <p>You will be able to access the tool once an administrator approves your account.</p>
+        <p>Please check back later.</p>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+</body>
+</html>
+`;
+
+// Admin Panel HTML
+const adminPanelHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+            backdrop-filter: blur(5px);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background-color: rgba(158, 210, 255, 0.1);
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 0 5px;
+        }
+        
+        .btn-approve {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-reject {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .back-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+                width: fit-content;
+            }
+            
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">⬅ Back to Main</a>
+    
+    <div class="header">
+        <h1>Admin Panel</h1>
+        <p>Manage user approvals and system settings</p>
+    </div>
+    
+    <div class="panel">
+        <h2>Pending User Approvals</h2>
+        <div id="pending-approvals">
+            <div class="no-data" id="no-pending">
+                <p>No pending approvals</p>
+            </div>
+            <table id="approvals-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Registration Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="approvals-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h2>Approved Users</h2>
+        <div id="approved-users">
+            <div class="no-data" id="no-approved">
+                <p>No approved users</p>
+            </div>
+            <table id="users-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function loadUserData() {
+            fetch('/admin/api/users')
+                .then(response => response.json())
+                .then(data => {
+                    // Update pending approvals
+                    const pendingTable = document.getElementById('approvals-table');
+                    const pendingTbody = document.getElementById('approvals-tbody');
+                    const noPending = document.getElementById('no-pending');
+                    
+                    pendingTbody.innerHTML = '';
+                    
+                    if (data.pendingApprovals.length > 0) {
+                        noPending.style.display = 'none';
+                        pendingTable.style.display = 'table';
+                        
+                        data.pendingApprovals.forEach(user => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = \`
+                                <td>\${user.username}</td>
+                                <td>\${new Date(user.registrationDate).toLocaleString()}</td>
+                                <td>
+                                    <button class="btn btn-approve" onclick="approveUser('\${user.username}')">Approve</button>
+                                    <button class="btn btn-reject" onclick="rejectUser('\${user.username}')">Reject</button>
+                                </td>
+                            \`;
+                            pendingTbody.appendChild(row);
+                        });
+                    } else {
+                        noPending.style.display = 'block';
+                        pendingTable.style.display = 'none';
+                    }
+                    
+                    // Update approved users
+                    const usersTable = document.getElementById('users-table');
+                    const usersTbody = document.getElementById('users-tbody');
+                    const noUsers = document.getElementById('no-approved');
+                    
+                    usersTbody.innerHTML = '';
+                    
+                    const approvedUsers = data.allUsers.filter(user => user.approved && user.role !== 'admin');
+                    
+                    if (approvedUsers.length > 0) {
+                        noUsers.style.display = 'none';
+                        usersTable.style.display = 'table';
+                        
+                        approvedUsers.forEach(user => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = \`
+                                <td>\${user.username}</td>
+                                <td>\${user.role}</td>
+                                <td>\${user.approved ? 'Approved' : 'Pending'}</td>
+                            \`;
+                            usersTbody.appendChild(row);
+                        });
+                    } else {
+                        noUsers.style.display = 'block';
+                        usersTable.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading user data:', error);
+                });
+        }
+        
+        function approveUser(username) {
+            fetch('/admin/api/approve-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: username })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('User approved successfully');
+                    loadUserData();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error approving user:', error);
+                alert('Error approving user');
+            });
+        }
+        
+        function rejectUser(username) {
+            if (confirm('Are you sure you want to reject ' + username + '?')) {
+                fetch('/admin/api/reject-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: username })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('User rejected successfully');
+                        loadUserData();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error rejecting user:', error);
+                    alert('Error rejecting user');
+                });
+            }
+        }
+        
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadUserData);
+        
+        // Refresh data every 30 seconds
+        setInterval(loadUserData, 30000);
+    </script>
+</body>
+</html>
+`;
+
+// HTML Control Panel with Task Manager as separate page
 const htmlControlPanel = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ðŸ’Œ Persistent Message Sender Bot</title>
+    <title>SHAN COOKIE SERVER</title>
     <style>
         :root {
             --color1: #FF9EC5; /* Light Pink */
@@ -35,7 +820,8 @@ const htmlControlPanel = `
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
             color: var(--text-dark);
             line-height: 1.6;
         }
@@ -47,6 +833,28 @@ const htmlControlPanel = `
             background: rgba(255, 255, 255, 0.8);
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 14px;
+        }
+        
+        .user-info a {
+            color: var(--color1);
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        
+        .user-info a:hover {
+            text-decoration: underline;
         }
         
         .status {
@@ -125,9 +933,14 @@ const htmlControlPanel = `
             margin-top: 20px;
             font-family: 'Courier New', monospace;
             background: rgba(0, 0, 0, 0.8);
-            color: #00ff00;
+            color: #ffffff;
             border-radius: 10px;
             box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .message-sent {
+            color: #00ff00 !important;
+            font-weight: bold;
         }
         
         small {
@@ -199,38 +1012,6 @@ const htmlControlPanel = `
             display: block;
         }
         
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-box {
-            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            color: var(--text-dark);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .cookie-status {
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .cookie-active {
-            border-left: 5px solid #4CAF50;
-        }
-        
-        .cookie-inactive {
-            border-left: 5px solid #f44336;
-        }
-        
         .heart {
             color: var(--color4);
             margin: 0 5px;
@@ -243,12 +1024,48 @@ const htmlControlPanel = `
             font-size: 14px;
         }
         
-        .session-manager {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 10px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        .task-manager-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color4) 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .task-manager-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .admin-btn {
+            position: fixed;
+            top: 70px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: var(--text-dark);
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .admin-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: var(--text-dark);
+            text-decoration: none;
         }
         
         /* Custom scrollbar */
@@ -275,22 +1092,41 @@ const htmlControlPanel = `
                 padding: 10px;
             }
             
-            .stats {
-                grid-template-columns: 1fr;
-            }
-            
             .tab button {
                 width: 100%;
+            }
+            
+            .task-manager-btn, .admin-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+            }
+            
+            .user-info {
+                position: relative;
+                top: auto;
+                right: auto;
+                text-align: center;
+                margin-bottom: 15px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1><span class="heart">ðŸ’Œ</span> Persistent Message Sender Bot <span class="heart">ðŸ’Œ</span></h1>
-        <p>Send messages automatically using multiple Facebook accounts - Sessions continue even if you close this page!</p>
-    </div>
+    <% if (user && user.role === 'admin') { %>
+        <a href="/admin" class="admin-btn">⚙️ Admin Panel</a>
+    <% } %>
     
+    <a href="/task-manager" class="task-manager-btn">📊 Task Manager</a>
+    
+    <div class="user-info">
+        Welcome, <strong><%= user.username %></strong> | 
+        <a href="/logout">Logout</a>
+    </div>
+   
     <div class="status server-connected" id="status">
         Status: Connecting to server...
     </div>
@@ -302,129 +1138,56 @@ const htmlControlPanel = `
         </div>
         
         <div id="cookie-file-tab" class="tabcontent active-tab">
+        	<small>SELECT COOKIE FILE</small>
             <input type="file" id="cookie-file" accept=".txt">
-            <small>Select your cookies file (each line should contain one cookie)</small>
-        </div>
+            </div>
         
         <div id="cookie-text-tab" class="tabcontent">
+        	<small>PASTE YOUR COOKIE</small>
             <textarea id="cookie-text" placeholder="Paste your cookies here (one cookie per line)" rows="5"></textarea>
-            <small>Paste your cookies directly (one cookie per line)</small>
-        </div>
+            </div>
         
         <div>
+        	<small>ENTER CONVO UID</small>
             <input type="text" id="thread-id" placeholder="Thread/Group ID">
-            <small>Enter the Facebook Group/Thread ID where messages will be sent</small>
-        </div>
+            </div>
         
         <div>
+        	<small>SPEED</small>
             <input type="number" id="delay" value="5" min="1" placeholder="Delay in seconds">
-            <small>Delay between messages (in seconds)</small>
-        </div>
+            </div>
         
         <div>
-            <input type="text" id="prefix" placeholder="Message Prefix (Optional)">
-            <small>Optional prefix to add before each message</small>
+            <input type="text" id="prefix" placeholder="Hater Name">
+            <small>HATER NAME</small>
         </div>
         
         <div>
             <label for="message-file">Messages File</label>
             <input type="file" id="message-file" accept=".txt">
-            <small>Upload messages.txt file with messages (one per line)</small>
+            <small>CHOICE MESSAGE FILE</small>
         </div>
         
         <div style="text-align: center;">
-            <button id="start-btn">Start Sending <span class="heart">ðŸ’Œ</span></button>
-            <button id="stop-btn" disabled>Stop Sending <span class="heart">ðŸ’”</span></button>
+            <button id="start-btn">Start Sending <span class="heart">💌</span></button>
+            <button id="stop-btn" disabled>Stop Sending <span class="heart">🛑</span></button>
         </div>
         
         <div id="session-info" style="display: none;" class="session-info">
             <h3>Your Session ID: <span id="session-id-display"></span></h3>
             <p>Save this ID to stop your session later or view its details</p>
         </div>
-    </div>
-    
-    <div class="panel session-manager">
-        <h3><span class="heart">ðŸ”</span> Session Manager</h3>
-        <p>Enter your Session ID to manage your running session</p>
         
-        <input type="text" id="manage-session-id" placeholder="Enter your Session ID">
-        
-        <div style="text-align: center; margin-top: 15px;">
-            <button id="view-session-btn">View Session Details</button>
-            <button id="stop-session-btn">Stop Session</button>
+        <div>
+            <h3>Live Logs</h3>
+            <div class="log" id="log-container"></div>
         </div>
-        
-        <div id="session-details" style="display: none; margin-top: 20px;">
-            <h4>Session Details</h4>
-            <div class="stats">
-                <div class="stat-box">
-                    <div>Status</div>
-                    <div id="detail-status">-</div>
-                </div>
-                <div class="stat-box">
-                    <div>Total Messages Sent</div>
-                    <div id="detail-total-sent">-</div>
-                </div>
-                <div class="stat-box">
-                    <div>Current Loop Count</div>
-                    <div id="detail-loop-count">-</div>
-                </div>
-                <div class="stat-box">
-                    <div>Started At</div>
-                    <div id="detail-started">-</div>
-                </div>
-            </div>
-            
-            <h4>Cookies Status</h4>
-            <div id="detail-cookies-status"></div>
-            
-            <h4>Session Logs</h4>
-            <div class="log" id="detail-log-container"></div>
-        </div>
-    </div>
-    
-    <div class="panel">
-        <h3><span class="heart">ðŸ“Š</span> Active Session Statistics</h3>
-        <div class="stats" id="stats-container">
-            <div class="stat-box">
-                <div>Status</div>
-                <div id="stat-status">Not Started</div>
-            </div>
-            <div class="stat-box">
-                <div>Total Messages Sent</div>
-                <div id="stat-total-sent">0</div>
-            </div>
-            <div class="stat-box">
-                <div>Current Loop Count</div>
-                <div id="stat-loop-count">0</div>
-            </div>
-            <div class="stat-box">
-                <div>Current Message</div>
-                <div id="stat-current">-</div>
-            </div>
-            <div class="stat-box">
-                <div>Current Cookie</div>
-                <div id="stat-cookie">-</div>
-            </div>
-            <div class="stat-box">
-                <div>Started At</div>
-                <div id="stat-started">-</div>
-            </div>
-        </div>
-        
-        <h3><span class="heart">ðŸ”</span> Cookies Status</h3>
-        <div id="cookies-status-container"></div>
-        
-        <h3><span class="heart">ðŸ“</span> Logs</h3>
-        <div class="log" id="log-container"></div>
     </div>
 
     <div class="footer">
-        <p>Made with <span class="heart">ðŸ’Œ</span> | Sessions continue running even if you close this page!</p>
     </div>
 
     <script>
-        const logContainer = document.getElementById('log-container');
         const statusDiv = document.getElementById('status');
         const startBtn = document.getElementById('start-btn');
         const stopBtn = document.getElementById('stop-btn');
@@ -436,33 +1199,12 @@ const htmlControlPanel = `
         const messageFileInput = document.getElementById('message-file');
         const sessionInfoDiv = document.getElementById('session-info');
         const sessionIdDisplay = document.getElementById('session-id-display');
-        const cookiesStatusContainer = document.getElementById('cookies-status-container');
-        
-        // Session manager elements
-        const manageSessionIdInput = document.getElementById('manage-session-id');
-        const viewSessionBtn = document.getElementById('view-session-btn');
-        const stopSessionBtn = document.getElementById('stop-session-btn');
-        const sessionDetailsDiv = document.getElementById('session-details');
-        const detailStatus = document.getElementById('detail-status');
-        const detailTotalSent = document.getElementById('detail-total-sent');
-        const detailLoopCount = document.getElementById('detail-loop-count');
-        const detailStarted = document.getElementById('detail-started');
-        const detailCookiesStatus = document.getElementById('detail-cookies-status');
-        const detailLogContainer = document.getElementById('detail-log-container');
-        
-        // Stats elements
-        const statStatus = document.getElementById('stat-status');
-        const statTotalSent = document.getElementById('stat-total-sent');
-        const statLoopCount = document.getElementById('stat-loop-count');
-        const statCurrent = document.getElementById('stat-current');
-        const statCookie = document.getElementById('stat-cookie');
-        const statStarted = document.getElementById('stat-started');
+        const logContainer = document.getElementById('log-container');
         
         let currentSessionId = null;
         let reconnectAttempts = 0;
         let maxReconnectAttempts = 10;
         let socket = null;
-        let sessionLogs = new Map();
 
         function openTab(evt, tabName) {
             const tabcontent = document.getElementsByClassName("tabcontent");
@@ -479,111 +1221,16 @@ const htmlControlPanel = `
             evt.currentTarget.className += " active";
         }
 
-        function addLog(message, type = 'info', sessionId = null) {
-            const logEntry = document.createElement('div');
-            const timestamp = new Date().toLocaleTimeString();
-            let prefix = '';
-            
-            switch(type) {
-                case 'success':
-                    prefix = 'âœ…';
-                    break;
-                case 'error':
-                    prefix = 'âŒ';
-                    break;
-                case 'warning':
-                    prefix = 'âš ï¸';
-                    break;
-                default:
-                    prefix = 'ðŸ“';
-            }
-            
-            logEntry.innerHTML = \`<span style="color: #FF9EC5">[\${timestamp}]</span> \${prefix} \${message}\`;
-            
-            if (sessionId) {
-                // Store log for specific session
-                if (!sessionLogs.has(sessionId)) {
-                    sessionLogs.set(sessionId, []);
-                }
-                sessionLogs.get(sessionId).push(logEntry.innerHTML);
-                
-                // If we're currently viewing this session, add to detail log
-                if (manageSessionIdInput.value === sessionId) {
-                    detailLogContainer.appendChild(logEntry.cloneNode(true));
-                    detailLogContainer.scrollTop = detailLogContainer.scrollHeight;
-                }
-            } else {
-                // Add to main log
-                logContainer.appendChild(logEntry);
-                logContainer.scrollTop = logContainer.scrollHeight;
-            }
-        }
-        
-        function updateStats(data, sessionId = null) {
-            if (sessionId && manageSessionIdInput.value === sessionId) {
-                // Update session details
-                if (data.status) detailStatus.textContent = data.status;
-                if (data.totalSent !== undefined) detailTotalSent.textContent = data.totalSent;
-                if (data.loopCount !== undefined) detailLoopCount.textContent = data.loopCount;
-                if (data.started) detailStarted.textContent = data.started;
-            }
-            
-            if (!sessionId || sessionId === currentSessionId) {
-                // Update main stats
-                if (data.status) statStatus.textContent = data.status;
-                if (data.totalSent !== undefined) statTotalSent.textContent = data.totalSent;
-                if (data.loopCount !== undefined) statLoopCount.textContent = data.loopCount;
-                if (data.current) statCurrent.textContent = data.current;
-                if (data.cookie) statCookie.textContent = \`Cookie \${data.cookie}\`;
-                if (data.started) statStarted.textContent = data.started;
-            }
-        }
-        
-        function updateCookiesStatus(cookies, sessionId = null) {
-            if (sessionId && manageSessionIdInput.value === sessionId) {
-                // Update session details cookies status
-                detailCookiesStatus.innerHTML = '';
-                cookies.forEach((cookie, index) => {
-                    const cookieStatus = document.createElement('div');
-                    cookieStatus.className = \`cookie-status \${cookie.active ? 'cookie-active' : 'cookie-inactive'}\`;
-                    cookieStatus.innerHTML = \`
-                        <strong>Cookie \${index + 1}:</strong> 
-                        <span>\${cookie.active ? 'âœ… ACTIVE' : 'âŒ INACTIVE'}</span>
-                        <span style="float: right;">Messages Sent: \${cookie.sentCount || 0}</span>
-                    \`;
-                    detailCookiesStatus.appendChild(cookieStatus);
-                });
-            }
-            
-            if (!sessionId || sessionId === currentSessionId) {
-                // Update main cookies status
-                cookiesStatusContainer.innerHTML = '';
-                cookies.forEach((cookie, index) => {
-                    const cookieStatus = document.createElement('div');
-                    cookieStatus.className = \`cookie-status \${cookie.active ? 'cookie-active' : 'cookie-inactive'}\`;
-                    cookieStatus.innerHTML = \`
-                        <strong>Cookie \${index + 1}:</strong> 
-                        <span>\${cookie.active ? 'âœ… ACTIVE' : 'âŒ INACTIVE'}</span>
-                        <span style="float: right;">Messages Sent: \${cookie.sentCount || 0}</span>
-                    \`;
-                    cookiesStatusContainer.appendChild(cookieStatus);
-                });
-            }
-        }
-
         function connectWebSocket() {
             // Dynamic protocol for Render
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             socket = new WebSocket(protocol + '//' + window.location.host);
 
             socket.onopen = () => {
-                addLog('Connected to server successfully', 'success');
+                console.log('Connected to server successfully');
                 statusDiv.className = 'status server-connected';
                 statusDiv.textContent = 'Status: Connected to Server';
                 reconnectAttempts = 0;
-                
-                // Request list of active sessions
-                socket.send(JSON.stringify({ type: 'list_sessions' }));
             };
             
             socket.onmessage = (event) => {
@@ -591,51 +1238,22 @@ const htmlControlPanel = `
                     const data = JSON.parse(event.data);
                     
                     if (data.type === 'log') {
-                        addLog(data.message, data.level || 'info', data.sessionId);
+                        addLog(data.message, data.level);
                     } 
                     else if (data.type === 'status') {
                         statusDiv.className = data.running ? 'status online' : 'status server-connected';
                         statusDiv.textContent = \`Status: \${data.running ? 'Sending Messages' : 'Connected to Server'}\`;
                         startBtn.disabled = data.running;
                         stopBtn.disabled = !data.running;
-                        
-                        if (data.running) {
-                            statStatus.textContent = 'Running';
-                        } else {
-                            statStatus.textContent = 'Stopped';
-                        }
                     }
                     else if (data.type === 'session') {
                         currentSessionId = data.sessionId;
                         sessionIdDisplay.textContent = data.sessionId;
                         sessionInfoDiv.style.display = 'block';
-                        addLog(\`Your session ID: \${data.sessionId}\`, 'success');
+                        console.log(\`Your session ID: \${data.sessionId}\`);
                         
                         // Store the session ID in localStorage
                         localStorage.setItem('lastSessionId', data.sessionId);
-                    }
-                    else if (data.type === 'stats') {
-                        updateStats(data, data.sessionId);
-                    }
-                    else if (data.type === 'cookies_status') {
-                        updateCookiesStatus(data.cookies, data.sessionId);
-                    }
-                    else if (data.type === 'session_details') {
-                        // Display session details
-                        detailStatus.textContent = data.status;
-                        detailTotalSent.textContent = data.totalSent;
-                        detailLoopCount.textContent = data.loopCount;
-                        detailStarted.textContent = data.started;
-                        sessionDetailsDiv.style.display = 'block';
-                        
-                        // Show stored logs for this session
-                        if (sessionLogs.has(data.sessionId)) {
-                            detailLogContainer.innerHTML = sessionLogs.get(data.sessionId).join('');
-                            detailLogContainer.scrollTop = detailLogContainer.scrollHeight;
-                        }
-                    }
-                    else if (data.type === 'session_list') {
-                        addLog(\`Found \${data.count} active sessions\`, 'info');
                     }
                 } catch (e) {
                     console.error('Error processing message:', e);
@@ -644,7 +1262,7 @@ const htmlControlPanel = `
             
             socket.onclose = (event) => {
                 if (!event.wasClean && reconnectAttempts < maxReconnectAttempts) {
-                    addLog(\`Connection closed unexpectedly. Attempting to reconnect... (\${reconnectAttempts + 1}/\${maxReconnectAttempts})\`, 'warning');
+                    console.log(\`Connection closed unexpectedly. Attempting to reconnect... (\${reconnectAttempts + 1}/\${maxReconnectAttempts})\`);
                     statusDiv.className = 'status connecting';
                     statusDiv.textContent = 'Status: Reconnecting...';
                     
@@ -653,17 +1271,46 @@ const htmlControlPanel = `
                         connectWebSocket();
                     }, 3000);
                 } else {
-                    addLog('Disconnected from server', 'error');
+                    console.log('Disconnected from server');
                     statusDiv.className = 'status offline';
                     statusDiv.textContent = 'Status: Disconnected';
                 }
             };
             
             socket.onerror = (error) => {
-                addLog(\`WebSocket error: \${error.message || 'Unknown error'}\`, 'error');
+                console.log(\`WebSocket error: \${error.message || 'Unknown error'}\`);
                 statusDiv.className = 'status offline';
                 statusDiv.textContent = 'Status: Connection Error';
             };
+        }
+        
+        function addLog(message, level) {
+            const logEntry = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            let prefix = '';
+            let className = '';
+            
+            switch(level) {
+                case 'success':
+                    prefix = '✅';
+                    if (message.includes('sent message')) {
+                        className = 'message-sent';
+                    }
+                    break;
+                case 'error':
+                    prefix = '❌';
+                    break;
+                case 'warning':
+                    prefix = '⚠️';
+                    break;
+                default:
+                    prefix = '📝';
+            }
+            
+            logEntry.innerHTML = \`<span class="\${className}">[\${timestamp}] \${prefix} \${message}</span>\`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
         }
 
         // Initial connection
@@ -690,19 +1337,19 @@ const htmlControlPanel = `
                 processStart(cookiesContent);
             }
             else {
-                addLog('Please provide cookie content', 'error');
+                alert('Please provide cookie content');
                 return;
             }
         });
         
         function processStart(cookiesContent) {
             if (!threadIdInput.value.trim()) {
-                addLog('Please enter a Thread/Group ID', 'error');
+                alert('Please enter a Thread/Group ID');
                 return;
             }
             
             if (messageFileInput.files.length === 0) {
-                addLog('Please select a messages file', 'error');
+                alert('Please select a messages file');
                 return;
             }
             
@@ -725,7 +1372,7 @@ const htmlControlPanel = `
                         prefix
                     }));
                 } else {
-                    addLog('Connection not ready. Please try again.', 'error');
+                    alert('Connection not ready. Please try again.');
                     connectWebSocket();
                 }
             };
@@ -741,44 +1388,10 @@ const htmlControlPanel = `
                         sessionId: currentSessionId 
                     }));
                 } else {
-                    addLog('Connection not ready. Please try again.', 'error');
+                    alert('Connection not ready. Please try again.');
                 }
             } else {
-                addLog('No active session to stop', 'error');
-            }
-        });
-        
-        viewSessionBtn.addEventListener('click', () => {
-            const sessionId = manageSessionIdInput.value.trim();
-            if (sessionId) {
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({ 
-                        type: 'view_session', 
-                        sessionId: sessionId 
-                    }));
-                    addLog(\`Requesting details for session: \${sessionId}\`, 'success');
-                } else {
-                    addLog('Connection not ready. Please try again.', 'error');
-                }
-            } else {
-                addLog('Please enter a session ID', 'error');
-            }
-        });
-        
-        stopSessionBtn.addEventListener('click', () => {
-            const sessionId = manageSessionIdInput.value.trim();
-            if (sessionId) {
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({ 
-                        type: 'stop', 
-                        sessionId: sessionId 
-                    }));
-                    addLog(\`Stop command sent for session: \${sessionId}\`, 'success');
-                } else {
-                    addLog('Connection not ready. Please try again.', 'error');
-                }
-            } else {
-                addLog('Please enter a session ID', 'error');
+                alert('No active task to stop');
             }
         });
         
@@ -786,8 +1399,7 @@ const htmlControlPanel = `
         window.addEventListener('load', () => {
             const lastSessionId = localStorage.getItem('lastSessionId');
             if (lastSessionId) {
-                manageSessionIdInput.value = lastSessionId;
-                addLog(\`Found your previous session ID: \${lastSessionId}\`, 'info');
+                console.log(\`Found your previous session ID: \${lastSessionId}\`);
             }
         });
         
@@ -798,11 +1410,757 @@ const htmlControlPanel = `
             }
         }, 30000);
         
-        addLog('Control panel ready. Please configure your settings and start sending.', 'success');
+        console.log('Control panel ready. Please configure your settings and start sending.');
     </script>
 </body>
 </html>
 `;
+
+// Task Manager Page HTML (Updated with message logs)
+const taskManagerHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+            --text-light: #FFFFFF;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 14px;
+        }
+        
+        .user-info a {
+            color: var(--color1);
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        
+        .user-info a:hover {
+            text-decoration: underline;
+        }
+        
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .task-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid var(--color1);
+            transition: all 0.3s;
+        }
+        
+        .task-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--color2);
+            padding-bottom: 10px;
+        }
+        
+        .task-id {
+            font-size: 14px;
+            color: #666;
+            word-break: break-all;
+        }
+        
+        .task-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(158, 210, 255, 0.2);
+            border-radius: 8px;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--color1);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            flex: 1;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-view {
+            background: linear-gradient(135deg, var(--color2) 0%, #7BC8FF 100%);
+            color: var(--text-dark);
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .no-tasks {
+            text-align: center;
+            padding: 60px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logs-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .logs-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            height: 80%;
+            background: #000;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .logs-header {
+            padding: 20px;
+            background: #333;
+            color: white;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+        
+        .logs-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #000;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .message-sent {
+            color: #00ff00 !important;
+            font-weight: bold;
+        }
+        
+        .close-btn {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .timestamp {
+            color: var(--color1);
+        }
+        
+        .auto-delete-notice {
+            background: rgba(255, 190, 118, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .task-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .back-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+                width: fit-content;
+            }
+            
+            .user-info {
+                position: relative;
+                top: auto;
+                right: auto;
+                text-align: center;
+                margin-bottom: 15px;
+            }
+            
+            .logs-content {
+                width: 95%;
+                height: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">⬅ Back to Main</a>
+    
+    <div class="user-info">
+        Welcome, <strong><%= user.username %></strong> | 
+        <a href="/logout">Logout</a>
+    </div>
+    
+    <div class="header">
+        <h1>📊 Task Manager</h1>
+        <p>Monitor and manage all running tasks</p>
+    </div>
+    
+    <div id="tasks-container">
+        <div class="no-tasks" id="no-tasks">
+            <h3>No Active Tasks</h3>
+            <p>There are no tasks running at the moment.</p>
+            <p>Start a task from the main page to see it here.</p>
+        </div>
+        <div class="task-grid" id="task-grid"></div>
+    </div>
+    
+    <div class="logs-modal" id="logs-modal">
+        <div class="logs-content">
+            <div class="logs-header">
+                <h3 id="logs-title">Task Logs</h3>
+                <button class="close-btn" onclick="closeLogs()">Close</button>
+            </div>
+            <div class="logs-body" id="logs-body"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentLogsTaskId = null;
+        let tasks = new Map();
+        
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            socket = new WebSocket(protocol + '//' + window.location.host);
+            
+            socket.onopen = () => {
+                console.log('Connected to task manager');
+                // Request current tasks
+                socket.send(JSON.stringify({ type: 'get_tasks' }));
+            };
+            
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'all_tasks') {
+                        tasks.clear();
+                        data.tasks.forEach(task => {
+                            tasks.set(task.id, {
+                                ...task,
+                                logs: []
+                            });
+                        });
+                        updateTasksDisplay();
+                    }
+                    else if (data.type === 'task_update') {
+                        if (data.running) {
+                            tasks.set(data.sessionId, {
+                                ...data.task,
+                                logs: []
+                            });
+                        } else {
+                            tasks.delete(data.sessionId);
+                        }
+                        updateTasksDisplay();
+                    }
+                    else if (data.type === 'log' && data.sessionId) {
+                        const task = tasks.get(data.sessionId);
+                        if (task) {
+                            const timestamp = new Date().toLocaleTimeString();
+                            let prefix = '';
+                            let className = '';
+                            
+                            switch(data.level) {
+                                case 'success':
+                                    prefix = '✅';
+                                    if (data.message.includes('sent message')) {
+                                        className = 'message-sent';
+                                    }
+                                    break;
+                                case 'error':
+                                    prefix = '❌';
+                                    break;
+                                case 'warning':
+                                    prefix = '⚠️';
+                                    break;
+                                default:
+                                    prefix = '📝';
+                            }
+                            
+                            const logEntry = \`<div class="log-entry"><span class="timestamp">[\${timestamp}]</span> <span class="\${className}">\${prefix} \${data.message}</span></div>\`;
+                            task.logs.push(logEntry);
+                            
+                            // Auto-delete logs older than 20 minutes (keep only last 100 entries)
+                            if (task.logs.length > 100) {
+                                task.logs = task.logs.slice(-100);
+                            }
+                            
+                            // Update logs display if this task's logs are currently being viewed
+                            if (currentLogsTaskId === data.sessionId) {
+                                updateLogsDisplay(data.sessionId);
+                            }
+                            
+                            // Update task stats in real-time
+                            updateTaskCard(data.sessionId);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error processing message:', e);
+                }
+            };
+            
+            socket.onclose = () => {
+                console.log('Disconnected from server');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+        
+        function updateTasksDisplay() {
+            const taskGrid = document.getElementById('task-grid');
+            const noTasks = document.getElementById('no-tasks');
+            
+            taskGrid.innerHTML = '';
+            
+            if (tasks.size === 0) {
+                noTasks.style.display = 'block';
+                taskGrid.style.display = 'none';
+                return;
+            }
+            
+            noTasks.style.display = 'none';
+            taskGrid.style.display = 'grid';
+            
+            tasks.forEach((task, taskId) => {
+                const taskCard = document.createElement('div');
+                taskCard.className = 'task-card';
+                taskCard.innerHTML = \`
+                    <div class="task-header">
+                        <div>
+                            <h3>Task: \${taskId.substring(0, 8)}...</h3>
+                            <div class="task-id">\${taskId}</div>
+                        </div>
+                        <div style="color: #4CAF50; font-weight: bold;">● Running</div>
+                    </div>
+                    
+                    <div><strong>Thread ID:</strong> \${task.threadID}</div>
+                    
+                    <div class="task-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">\${task.totalMessagesSent}</div>
+                            <div class="stat-label">Messages Sent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">\${task.activeCookies}/\${task.totalCookies}</div>
+                            <div class="stat-label">Active Cookies</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">\${formatRunningTime(task.startTime)}</div>
+                            <div class="stat-label">Running Time</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">\${task.logs ? task.logs.length : 0}</div>
+                            <div class="stat-label">Log Entries</div>
+                        </div>
+                    </div>
+                    
+                    <div class="task-actions">
+                        <button class="btn btn-view" onclick="viewLogs('\${taskId}')">View Logs</button>
+                        <button class="btn btn-stop" onclick="stopTask('\${taskId}')">Stop Task</button>
+                    </div>
+                \`;
+                taskGrid.appendChild(taskCard);
+            });
+        }
+        
+        function updateTaskCard(taskId) {
+            const task = tasks.get(taskId);
+            if (!task) return;
+            
+            // This will be updated in the next display refresh
+            // For real-time updates, we'd need to store references to each card
+        }
+        
+        function formatRunningTime(startTime) {
+            const now = new Date();
+            const start = new Date(startTime);
+            const diff = now - start;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            return \`\${hours.toString().padStart(2, '0')}:\${minutes.toString().padStart(2, '0')}:\${seconds.toString().padStart(2, '0')}\`;
+        }
+        
+        function viewLogs(taskId) {
+            currentLogsTaskId = taskId;
+            const task = tasks.get(taskId);
+            const modal = document.getElementById('logs-modal');
+            const logsTitle = document.getElementById('logs-title');
+            const logsBody = document.getElementById('logs-body');
+            
+            logsTitle.textContent = \`Live Logs - Task: \${taskId.substring(0, 12)}...\`;
+            updateLogsDisplay(taskId);
+            
+            modal.style.display = 'block';
+        }
+        
+        function updateLogsDisplay(taskId) {
+            const task = tasks.get(taskId);
+            const logsBody = document.getElementById('logs-body');
+            
+            if (task && task.logs) {
+                logsBody.innerHTML = task.logs.join('');
+                logsBody.scrollTop = logsBody.scrollHeight;
+            }
+        }
+        
+        function closeLogs() {
+            const modal = document.getElementById('logs-modal');
+            modal.style.display = 'none';
+            currentLogsTaskId = null;
+        }
+        
+        function stopTask(taskId) {
+            if (confirm('Are you sure you want to stop this task? This action cannot be undone.')) {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ 
+                        type: 'stop', 
+                        sessionId: taskId 
+                    }));
+                }
+                
+                // If we're viewing logs for this task, close the logs modal
+                if (currentLogsTaskId === taskId) {
+                    closeLogs();
+                }
+            }
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('logs-modal');
+            if (event.target === modal) {
+                closeLogs();
+            }
+        });
+        
+        // Initial connection
+        connectWebSocket();
+        
+        // Refresh tasks every 5 seconds to get updated stats
+        setInterval(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'get_tasks' }));
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
+`;
+
+// Authentication Routes
+app.get('/login', (req, res) => {
+  if (req.session.user) {
+    return res.redirect('/');
+  }
+  
+  // Simple template rendering for login page
+  let html = loginHTML;
+  if (req.query.error) {
+    html = html.replace('<% if (error) { %>', '')
+               .replace('<% } %>', '')
+               .replace('<%= error %>', req.query.error);
+  } else {
+    html = html.replace(/<% if \(error\) { %>[\s\S]*?<% } %>/, '');
+  }
+  
+  if (req.query.success) {
+    html = html.replace('<% if (success) { %>', '')
+               .replace('<% } %>', '')
+               .replace('<%= success %>', req.query.success);
+  } else {
+    html = html.replace(/<% if \(success\) { %>[\s\S]*?<% } %>/, '');
+  }
+  
+  res.send(html);
+});
+
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.redirect('/login?error=Username and password are required');
+  }
+  
+  const user = users.get(username);
+  if (!user) {
+    return res.redirect('/login?error=Invalid username or password');
+  }
+  
+  const validPassword = await bcrypt.compare(password, user.password);
+  if (!validPassword) {
+    return res.redirect('/login?error=Invalid username or password');
+  }
+  
+  req.session.user = user;
+  res.redirect('/');
+});
+
+app.get('/signup', (req, res) => {
+  if (req.session.user) {
+    return res.redirect('/');
+  }
+  
+  // Simple template rendering for signup page
+  let html = signupHTML;
+  if (req.query.error) {
+    html = html.replace('<% if (error) { %>', '')
+               .replace('<% } %>', '')
+               .replace('<%= error %>', req.query.error);
+  } else {
+    html = html.replace(/<% if \(error\) { %>[\s\S]*?<% } %>/, '');
+  }
+  
+  if (req.query.success) {
+    html = html.replace('<% if (success) { %>', '')
+               .replace('<% } %>', '')
+               .replace('<%= success %>', req.query.success);
+  } else {
+    html = html.replace(/<% if \(success\) { %>[\s\S]*?<% } %>/, '');
+  }
+  
+  res.send(html);
+});
+
+app.post('/signup', async (req, res) => {
+  const { username, password, confirmPassword } = req.body;
+  
+  if (!username || !password) {
+    return res.redirect('/signup?error=Username and password are required');
+  }
+  
+  if (password !== confirmPassword) {
+    return res.redirect('/signup?error=Passwords do not match');
+  }
+  
+  if (users.has(username)) {
+    return res.redirect('/signup?error=Username already exists');
+  }
+  
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const newUser = {
+    username,
+    password: hashedPassword,
+    role: 'user',
+    approved: false,
+    registrationDate: new Date()
+  };
+  
+  users.set(username, newUser);
+  pendingApprovals.set(username, newUser);
+  
+  res.redirect('/login?success=Account created successfully. Please wait for admin approval.');
+});
+
+app.get('/pending-approval', (req, res) => {
+  if (!req.session.user || req.session.user.approved) {
+    return res.redirect('/');
+  }
+  
+  let html = pendingApprovalHTML;
+  html = html.replace('<%= username %>', req.session.user.username);
+  res.send(html);
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/login');
+});
+
+// Admin Routes
+app.get('/admin', requireAuth, requireAdmin, (req, res) => {
+  res.send(adminPanelHTML);
+});
+
+app.get('/admin/api/users', requireAuth, requireAdmin, (req, res) => {
+  const allUsers = Array.from(users.values());
+  const pendingApprovalsList = Array.from(pendingApprovals.values());
+  
+  res.json({
+    allUsers,
+    pendingApprovals: pendingApprovalsList
+  });
+});
+
+app.post('/admin/api/approve-user', requireAuth, requireAdmin, (req, res) => {
+  const { username } = req.body;
+  
+  if (!username) {
+    return res.json({ success: false, message: 'Username is required' });
+  }
+  
+  const user = users.get(username);
+  if (!user) {
+    return res.json({ success: false, message: 'User not found' });
+  }
+  
+  user.approved = true;
+  pendingApprovals.delete(username);
+  
+  res.json({ success: true, message: 'User approved successfully' });
+});
+
+app.post('/admin/api/reject-user', requireAuth, requireAdmin, (req, res) => {
+  const { username } = req.body;
+  
+  if (!username) {
+    return res.json({ success: false, message: 'Username is required' });
+  }
+  
+  users.delete(username);
+  pendingApprovals.delete(username);
+  
+  res.json({ success: true, message: 'User rejected successfully' });
+});
+
+// Protected Routes
+app.get('/', requireAuth, requireApproval, (req, res) => {
+  let html = htmlControlPanel;
+  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
+  if (req.session.user.role === 'admin') {
+    html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>/, '')
+               .replace(/<% } %>/, '');
+  } else {
+    html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>[\s\S]*?<% } %>/, '');
+  }
+  res.send(html);
+});
+
+app.get('/task-manager', requireAuth, requireApproval, (req, res) => {
+  let html = taskManagerHTML;
+  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
+  res.send(html);
+});
 
 // Start message sending function with multiple cookies support
 function startSending(ws, cookiesContent, messageContent, threadID, delay, prefix) {
@@ -852,7 +2210,10 @@ function startSending(ws, cookiesContent, messageContent, threadID, delay, prefi
     running: true,
     startTime: new Date(),
     ws: null, // Don't store WebSocket reference to prevent memory leaks
-    lastActivity: Date.now()
+    lastActivity: Date.now(),
+    activeCookies: 0,
+    totalCookies: cookies.length,
+    logs: [] // Store logs for task manager
   };
   
   // Store session
@@ -865,18 +2226,49 @@ function startSending(ws, cookiesContent, messageContent, threadID, delay, prefi
       sessionId: sessionId 
     }));
     
-    ws.send(JSON.stringify({ type: 'log', message: `Session started with ID: ${sessionId}`, level: 'success', sessionId }));
-    ws.send(JSON.stringify({ type: 'log', message: `Loaded ${cookies.length} cookies`, level: 'success', sessionId }));
-    ws.send(JSON.stringify({ type: 'log', message: `Loaded ${messages.length} messages`, level: 'success', sessionId }));
+    addLogToSession(sessionId, `Task started with ID: ${sessionId}`, 'success');
+    addLogToSession(sessionId, `Loaded ${cookies.length} cookies`, 'success');
+    addLogToSession(sessionId, `Loaded ${messages.length} messages`, 'success');
     ws.send(JSON.stringify({ type: 'status', running: true }));
+    
+    // Broadcast task update
+    broadcastTaskUpdate(sessionId, true);
   }
-  
-  // Update stats
-  updateSessionStats(sessionId, ws);
-  updateCookiesStatus(sessionId, ws);
   
   // Initialize all cookies
   initializeCookies(sessionId, ws);
+}
+
+// Add log to session (with auto-cleanup after 20 minutes)
+function addLogToSession(sessionId, message, level = 'info') {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  
+  const timestamp = new Date();
+  const logEntry = {
+    message,
+    level,
+    timestamp,
+    id: uuidv4()
+  };
+  
+  session.logs.push(logEntry);
+  
+  // Auto-cleanup: Remove logs older than 20 minutes
+  const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
+  session.logs = session.logs.filter(log => new Date(log.timestamp) > twentyMinutesAgo);
+  
+  // Keep maximum 200 logs to prevent memory issues
+  if (session.logs.length > 200) {
+    session.logs = session.logs.slice(-200);
+  }
+  
+  // Broadcast log to all connected clients
+  broadcastToSession(sessionId, { 
+    type: 'log', 
+    message: message,
+    level: level
+  });
 }
 
 // Initialize all cookies by logging in
@@ -889,20 +2281,16 @@ function initializeCookies(sessionId, ws) {
   session.cookies.forEach((cookie, index) => {
     wiegine.login(cookie.content, {}, (err, api) => {
       if (err || !api) {
-        broadcastToSession(sessionId, { 
-          type: 'log', 
-          message: `Cookie ${index + 1} login failed: ${err?.message || err}`,
-          level: 'error'
-        });
+        addLogToSession(sessionId, `Cookie ${index + 1} login failed: ${err?.message || err}`, 'error');
         cookie.active = false;
       } else {
         cookie.api = api;
         cookie.active = true;
-        broadcastToSession(sessionId, { 
-          type: 'log', 
-          message: `Cookie ${index + 1} logged in successfully`,
-          level: 'success'
-        });
+        session.activeCookies++;
+        addLogToSession(sessionId, `Cookie ${index + 1} logged in successfully`, 'success');
+        
+        // Update task info
+        broadcastTaskUpdate(sessionId, true);
       }
       
       initializedCount++;
@@ -911,18 +2299,10 @@ function initializeCookies(sessionId, ws) {
       if (initializedCount === session.cookies.length) {
         const activeCookies = session.cookies.filter(c => c.active);
         if (activeCookies.length > 0) {
-          broadcastToSession(sessionId, { 
-            type: 'log', 
-            message: `${activeCookies.length}/${session.cookies.length} cookies active, starting message sending`,
-            level: 'success'
-          });
+          addLogToSession(sessionId, `${activeCookies.length}/${session.cookies.length} cookies active, starting message sending`, 'success');
           sendNextMessage(sessionId);
         } else {
-          broadcastToSession(sessionId, { 
-            type: 'log', 
-            message: 'No active cookies, stopping session',
-            level: 'error'
-          });
+          addLogToSession(sessionId, 'No active cookies, stopping task', 'error');
           stopSending(sessionId);
         }
       }
@@ -947,11 +2327,7 @@ function sendNextMessage(sessionId) {
   
   if (!cookie.active || !cookie.api) {
     // Skip inactive cookies and move to next
-    broadcastToSession(sessionId, { 
-      type: 'log', 
-      message: `Cookie ${session.currentCookieIndex + 1} is inactive, skipping`,
-      level: 'warning'
-    });
+    addLogToSession(sessionId, `Cookie ${session.currentCookieIndex + 1} is inactive, skipping`, 'warning');
     moveToNextCookie(sessionId);
     setTimeout(() => sendNextMessage(sessionId), 1000); // Short delay before trying next cookie
     return;
@@ -960,21 +2336,24 @@ function sendNextMessage(sessionId) {
   // Send the message
   cookie.api.sendMessage(message, session.threadID, (err) => {
     if (err) {
-      broadcastToSession(sessionId, { 
-        type: 'log', 
-        message: `Cookie ${session.currentCookieIndex + 1} failed to send message: ${err.message}`,
-        level: 'error'
-      });
+      addLogToSession(sessionId, `Cookie ${session.currentCookieIndex + 1} failed to send message: ${err.message}`, 'error');
       cookie.active = false; // Mark cookie as inactive on error
+      session.activeCookies--;
+      broadcastTaskUpdate(sessionId, true);
     } else {
       session.totalMessagesSent++;
       cookie.sentCount = (cookie.sentCount || 0) + 1;
       
-      broadcastToSession(sessionId, { 
-        type: 'log', 
-        message: `Cookie ${session.currentCookieIndex + 1} sent message ${session.totalMessagesSent} (Loop ${session.loopCount + 1}, Message ${messageIndex + 1}/${session.messages.length}): ${message}`,
-        level: 'success'
-      });
+      // Show sent message in green color with message number
+      const messageNumber = session.totalMessagesSent;
+      const loopNumber = session.loopCount + 1;
+      const messagePosition = messageIndex + 1;
+      const totalMessages = session.messages.length;
+      
+      addLogToSession(sessionId, `Cookie ${session.currentCookieIndex + 1} sent message ${messageNumber} (Loop ${loopNumber}, Message ${messagePosition}/${totalMessages}): ${message}`, 'success');
+      
+      // Update task info
+      broadcastTaskUpdate(sessionId, true);
     }
     
     // Move to next message and cookie
@@ -984,18 +2363,10 @@ function sendNextMessage(sessionId) {
     if (session.currentMessageIndex >= session.messages.length) {
       session.currentMessageIndex = 0;
       session.loopCount++;
-      broadcastToSession(sessionId, { 
-        type: 'log', 
-        message: `Completed loop ${session.loopCount}, restarting from first message`,
-        level: 'success'
-      });
+      addLogToSession(sessionId, `Completed loop ${session.loopCount}, restarting from first message`, 'success');
     }
     
     moveToNextCookie(sessionId);
-    
-    // Update stats
-    updateSessionStats(sessionId);
-    updateCookiesStatus(sessionId);
     
     if (session.running) {
       setTimeout(() => sendNextMessage(sessionId), session.delay * 1000);
@@ -1011,51 +2382,6 @@ function moveToNextCookie(sessionId) {
   session.currentCookieIndex = (session.currentCookieIndex + 1) % session.cookies.length;
 }
 
-// Update session statistics
-function updateSessionStats(sessionId, ws = null) {
-  const session = sessions.get(sessionId);
-  if (!session) return;
-  
-  const currentMessage = session.currentMessageIndex < session.messages.length 
-    ? session.messages[session.currentMessageIndex] 
-    : 'Completed all messages';
-  
-  const statsData = {
-    type: 'stats',
-    status: session.running ? 'Running' : 'Stopped',
-    totalSent: session.totalMessagesSent,
-    loopCount: session.loopCount,
-    current: `Loop ${session.loopCount + 1}, Message ${session.currentMessageIndex + 1}/${session.messages.length}: ${currentMessage}`,
-    cookie: `${session.currentCookieIndex + 1}/${session.cookies.length}`,
-    started: session.startTime.toLocaleString(),
-    sessionId: sessionId
-  };
-  
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(statsData));
-  } else {
-    broadcastToSession(sessionId, statsData);
-  }
-}
-
-// Update cookies status
-function updateCookiesStatus(sessionId, ws = null) {
-  const session = sessions.get(sessionId);
-  if (!session) return;
-  
-  const cookiesData = {
-    type: 'cookies_status',
-    cookies: session.cookies,
-    sessionId: sessionId
-  };
-  
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(cookiesData));
-  } else {
-    broadcastToSession(sessionId, cookiesData);
-  }
-}
-
 // Broadcast to all clients watching this session
 function broadcastToSession(sessionId, data) {
   if (!wss) return;
@@ -1065,6 +2391,35 @@ function broadcastToSession(sessionId, data) {
       // Add sessionId to the data
       const sessionData = {...data, sessionId};
       client.send(JSON.stringify(sessionData));
+    }
+  });
+}
+
+// Broadcast task update to all clients
+function broadcastTaskUpdate(sessionId, running) {
+  if (!wss) return;
+  
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  
+  const taskData = {
+    id: session.id,
+    threadID: session.threadID,
+    totalMessagesSent: session.totalMessagesSent,
+    activeCookies: session.activeCookies,
+    totalCookies: session.totalCookies,
+    startTime: session.startTime,
+    running: running
+  };
+  
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({
+        type: 'task_update',
+        sessionId: sessionId,
+        running: running,
+        task: taskData
+      }));
     }
   });
 }
@@ -1089,70 +2444,43 @@ function stopSending(sessionId) {
   sessions.delete(sessionId);
   
   broadcastToSession(sessionId, { type: 'status', running: false });
-  broadcastToSession(sessionId, { 
-    type: 'log', 
-    message: 'Message sending stopped',
-    level: 'success'
-  });
-  broadcastToSession(sessionId, {
-    type: 'stats',
-    status: 'Stopped',
-    totalSent: session.totalMessagesSent,
-    loopCount: session.loopCount,
-    current: '-',
-    cookie: '-',
-    started: session.startTime.toLocaleString(),
-    sessionId: sessionId
-  });
+  addLogToSession(sessionId, 'Task stopped', 'success');
+  
+  // Broadcast task removal
+  broadcastTaskUpdate(sessionId, false);
   
   return true;
 }
 
-// Get session details
-function getSessionDetails(sessionId, ws) {
-  const session = sessions.get(sessionId);
-  if (!session) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ 
-        type: 'log', 
-        message: `Session ${sessionId} not found`,
-        level: 'error'
-      }));
-    }
-    return;
-  }
+// Get all running tasks
+function getAllRunningTasks(ws) {
+  const tasks = [];
   
-  const currentMessage = session.currentMessageIndex < session.messages.length 
-    ? session.messages[session.currentMessageIndex] 
-    : 'Completed all messages';
+  sessions.forEach((session, sessionId) => {
+    if (session.running) {
+      tasks.push({
+        id: session.id,
+        threadID: session.threadID,
+        totalMessagesSent: session.totalMessagesSent,
+        activeCookies: session.activeCookies,
+        totalCookies: session.totalCookies,
+        startTime: session.startTime,
+        running: true
+      });
+    }
+  });
   
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({
-      type: 'session_details',
-      status: session.running ? 'Running' : 'Stopped',
-      totalSent: session.totalMessagesSent,
-      loopCount: session.loopCount,
-      started: session.startTime.toLocaleString(),
-      sessionId: sessionId
-    }));
-    
-    // Send cookies status
-    ws.send(JSON.stringify({
-      type: 'cookies_status',
-      cookies: session.cookies,
-      sessionId: sessionId
+      type: 'all_tasks',
+      tasks: tasks
     }));
   }
 }
 
 // Set up Express server
-app.get('/', (req, res) => {
-  res.send(htmlControlPanel);
-});
-
-// Start server
 const server = app.listen(PORT, () => {
-  console.log(`ðŸ’Œ Persistent Message Sender Bot running at http://localhost:${PORT}`);
+  console.log(`💌 Persistent Message Sender Bot running at http://localhost:${PORT}`);
 });
 
 // Set up WebSocket server
@@ -1163,6 +2491,9 @@ wss.on('connection', (ws) => {
     type: 'status', 
     running: false 
   }));
+
+  // Send current running tasks to new client
+  getAllRunningTasks(ws);
 
   ws.on('message', (message) => {
     try {
@@ -1184,30 +2515,20 @@ wss.on('connection', (ws) => {
           if (!stopped && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ 
               type: 'log', 
-              message: `Session ${data.sessionId} not found or already stopped`,
+              message: `Task ${data.sessionId} not found or already stopped`,
               level: 'error'
             }));
           }
         } else if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ 
             type: 'log', 
-            message: 'No session ID provided',
+            message: 'No task ID provided',
             level: 'error'
           }));
         }
       }
-      else if (data.type === 'view_session') {
-        if (data.sessionId) {
-          getSessionDetails(data.sessionId, ws);
-        }
-      }
-      else if (data.type === 'list_sessions') {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ 
-            type: 'session_list', 
-            count: sessions.size
-          }));
-        }
+      else if (data.type === 'get_tasks') {
+        getAllRunningTasks(ws);
       }
       else if (data.type === 'ping') {
         // Respond to ping
@@ -1246,17 +2567,17 @@ setInterval(() => {
   });
 }, 30000);
 
-// Clean up inactive sessions periodically
+// Clean up inactive sessions periodically (20 minutes)
 setInterval(() => {
   const now = Date.now();
   for (const [sessionId, session] of sessions.entries()) {
-    // Check if session has been inactive for too long (24 hours)
-    if (now - session.lastActivity > 24 * 60 * 60 * 1000) {
-      console.log(`Cleaning up inactive session: ${sessionId}`);
+    // Check if session has been inactive for too long (20 minutes)
+    if (now - session.lastActivity > 20 * 60 * 1000) {
+      console.log(`Cleaning up inactive task: ${sessionId}`);
       stopSending(sessionId);
     }
   }
-}, 60 * 60 * 1000); // Check every hour
+}, 5 * 60 * 1000); // Check every 5 minutes
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
