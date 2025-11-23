@@ -63,95 +63,50 @@ function requireApproval(req, res, next) {
   }
 }
 
-// ==================== NEON STYLED HTML PAGES ====================
-
-// Neon CSS Base Styles
-const neonStyles = `
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+// HTML Login Page
+const loginHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SHAN COOKIE SERVER</title>
     <style>
         :root {
-            --neon-pink: #FF00FF;
-            --neon-cyan: #00FFFF;
-            --neon-green: #00FF00;
-            --neon-purple: #8B00FF;
-            --dark-bg: #0a0a0a;
-            --text-light: #FFFFFF;
-            --text-dark: #0a0a0a;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
         }
         
         body {
-            font-family: 'Rajdhani', sans-serif;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 50%, #0a0a1a 100%);
-            color: var(--text-light);
-            line-height: 1.6;
-            position: relative;
-            overflow-x: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
         }
         
-        /* Grid overlay effect */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
-            background-size: 50px 50px;
-            opacity: 0.3;
-            pointer-events: none;
-            z-index: 1;
-        }
-        
-        /* Neon text effects */
-        .neon-title {
-            font-family: 'Orbitron', monospace;
-            text-shadow: 
-                0 0 5px var(--neon-cyan),
-                0 0 10px var(--neon-cyan),
-                0 0 15px var(--neon-cyan),
-                0 0 20px var(--neon-cyan);
-            color: var(--neon-cyan);
-            letter-spacing: 2px;
-        }
-        
-        .neon-subtitle {
-            font-family: 'Rajdhani', sans-serif;
-            text-shadow: 
-                0 0 5px var(--neon-pink),
-                0 0 10px var(--neon-pink),
-                0 0 15px var(--neon-pink);
-            color: var(--neon-pink);
-        }
-        
-        /* Container styles */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .form-container, .panel {
-            background: rgba(0, 0, 0, 0.9);
-            border: 2px solid var(--neon-cyan);
-            box-shadow: 
-                0 0 20px var(--neon-cyan),
-                inset 0 0 20px rgba(0, 255, 255, 0.1);
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
             padding: 40px;
-            border-radius: 10px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
             backdrop-filter: blur(10px);
-            margin: 20px auto;
-            max-width: 500px;
+        }
+        
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
         }
         
         .form-group {
@@ -162,65 +117,43 @@ const neonStyles = `
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
-            color: var(--neon-cyan);
-            text-shadow: 0 0 5px var(--neon-cyan);
+            color: var(--text-dark);
         }
         
-        input, select, textarea {
+        input {
             width: 100%;
             padding: 12px 15px;
-            border: 2px solid var(--neon-cyan);
+            border: 2px solid var(--color2);
             border-radius: 8px;
-            background: rgba(0, 0, 0, 0.8);
-            color: var(--text-light);
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-dark);
             font-size: 16px;
-            font-family: 'Rajdhani', sans-serif;
             transition: all 0.3s;
-            box-shadow: 
-                0 0 10px rgba(0, 255, 255, 0.3),
-                inset 0 0 5px rgba(0, 255, 255, 0.1);
+            box-sizing: border-box;
         }
         
-        input:focus, select:focus, textarea:focus {
+        input:focus {
             outline: none;
-            border-color: var(--neon-pink);
-            box-shadow: 
-                0 0 20px var(--neon-pink),
-                inset 0 0 10px rgba(255, 0, 255, 0.2);
+            border-color: var(--color1);
+            box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
         }
         
         button {
             width: 100%;
             padding: 12px 20px;
-            background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-pink) 100%);
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
             color: var(--text-dark);
-            border: 2px solid var(--neon-cyan);
+            border: none;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 16px;
             transition: all 0.3s;
-            box-shadow: 
-                0 0 10px var(--neon-cyan),
-                inset 0 0 10px rgba(0, 255, 255, 0.2);
-            text-shadow: 0 0 5px var(--neon-cyan);
             margin-top: 10px;
         }
         
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 
-                0 0 20px var(--neon-cyan),
-                0 0 30px var(--neon-pink),
-                inset 0 0 10px rgba(0, 255, 255, 0.3);
-        }
-        
-        button:disabled {
-            background: #666;
-            cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
         
         .links {
@@ -229,15 +162,13 @@ const neonStyles = `
         }
         
         .links a {
-            color: var(--neon-green);
+            color: var(--color1);
             text-decoration: none;
             margin: 0 10px;
-            text-shadow: 0 0 5px var(--neon-green);
-            transition: all 0.3s;
         }
         
         .links a:hover {
-            text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
+            text-decoration: underline;
         }
         
         .alert {
@@ -245,21 +176,383 @@ const neonStyles = `
             border-radius: 8px;
             margin-bottom: 20px;
             text-align: center;
-            border: 2px solid;
         }
         
         .alert-error {
-            background: rgba(255, 0, 0, 0.2);
-            color: #ff6b6b;
-            border-color: #ff0000;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            background: rgba(255, 82, 82, 0.2);
+            color: #d32f2f;
+            border: 1px solid #ffcdd2;
         }
         
         .alert-success {
-            background: rgba(0, 255, 0, 0.2);
-            color: #00ff00;
-            border-color: #00ff00;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            background: rgba(76, 175, 80, 0.2);
+            color: #388e3c;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>SHAN COOKIE SERVER</h1>
+        
+        <% if (error) { %>
+            <div class="alert alert-error">
+                <%= error %>
+            </div>
+        <% } %>
+        
+        <% if (success) { %>
+            <div class="alert alert-success">
+                <%= success %>
+            </div>
+        <% } %>
+        
+        <form action="/login" method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit">Login</button>
+        </form>
+        
+        <div class="links">
+            <a href="/signup">Create Account</a>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+// HTML Signup Page
+const signupHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        .signup-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--color2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-dark);
+            font-size: 16px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--color1);
+            box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .links a {
+            color: var(--color1);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        
+        .links a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .alert-error {
+            background: rgba(255, 82, 82, 0.2);
+            color: #d32f2f;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .alert-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #388e3c;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <h1>Create Account</h1>
+        
+        <% if (error) { %>
+            <div class="alert alert-error">
+                <%= error %>
+            </div>
+        <% } %>
+        
+        <% if (success) { %>
+            <div class="alert alert-success">
+                <%= success %>
+            </div>
+        <% } %>
+        
+        <form action="/signup" method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required>
+            </div>
+            
+            <button type="submit">Sign Up</button>
+        </form>
+        
+        <div class="links">
+            <a href="/login">Back to Login</a>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+// HTML Pending Approval Page
+const pendingApprovalHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pending Approval - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        .approval-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+        
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: var(--color2);
+        }
+        
+        p {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .logout-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="approval-container">
+        <div class="icon">⏳</div>
+        <h1>Account Pending Approval</h1>
+        <p>Your account <strong><%= username %></strong> is waiting for admin approval.</p>
+        <p>You will be able to access the tool once an administrator approves your account.</p>
+        <p>Please check back later.</p>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+</body>
+</html>
+`;
+
+// Admin Panel HTML
+const adminPanelHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+            backdrop-filter: blur(5px);
         }
         
         table {
@@ -271,264 +564,122 @@ const neonStyles = `
         th, td {
             padding: 12px 15px;
             text-align: left;
-            border: 1px solid var(--neon-cyan);
+            border-bottom: 1px solid #ddd;
         }
         
         th {
-            background: linear-gradient(90deg, var(--neon-cyan) 0%, var(--neon-pink) 100%);
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
             color: var(--text-dark);
             font-weight: bold;
-            text-shadow: 0 0 5px var(--neon-cyan);
         }
         
         tr:hover {
-            background-color: rgba(0, 255, 255, 0.1);
+            background-color: rgba(158, 210, 255, 0.1);
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 0 5px;
         }
         
         .btn-approve {
-            background: linear-gradient(135deg, var(--neon-green) 0%, #00cc00 100%);
-            color: var(--text-dark);
-            border-color: var(--neon-green);
+            background: #4CAF50;
+            color: white;
         }
         
         .btn-reject {
-            background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
-            color: var(--text-light);
-            border-color: #ff0000;
-        }
-    </style>
-`;
-
-// HTML Login Page with Neon Styling
-const loginHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - SHAN COOKIE SERVER</title>
-    ${neonStyles}
-</head>
-<body>
-    <div class="container">
-        <div class="form-container">
-            <h1 class="neon-title" style="text-align: center; margin-bottom: 30px;">SHAN COOKIE SERVER</h1>
-            <h2 class="neon-subtitle" style="text-align: center; margin-bottom: 20px;">LOGIN</h2>
-            
-            <% if (error) { %>
-                <div class="alert alert-error"><%= error %></div>
-            <% } %>
-            
-            <% if (success) { %>
-                <div class="alert alert-success"><%= success %></div>
-            <% } %>
-            
-            <form action="/login" method="POST">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                
-                <button type="submit">LOGIN</button>
-            </form>
-            
-            <div class="links">
-                <a href="/signup">Create Account</a>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-`;
-
-// HTML Signup Page with Neon Styling
-const signupHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - SHAN COOKIE SERVER</title>
-    ${neonStyles}
-</head>
-<body>
-    <div class="container">
-        <div class="form-container">
-            <h1 class="neon-title" style="text-align: center; margin-bottom: 30px;">SHAN COOKIE SERVER</h1>
-            <h2 class="neon-subtitle" style="text-align: center; margin-bottom: 20px;">CREATE ACCOUNT</h2>
-            
-            <% if (error) { %>
-                <div class="alert alert-error"><%= error %></div>
-            <% } %>
-            
-            <% if (success) { %>
-                <div class="alert alert-success"><%= success %></div>
-            <% } %>
-            
-            <form action="/signup" method="POST">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="confirm_password">Confirm Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" required>
-                </div>
-                
-                <button type="submit">SIGN UP</button>
-            </form>
-            
-            <div class="links">
-                <a href="/login">Already have an account? Login</a>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-`;
-
-// HTML Admin Login Page (Dedicated) - NEW
-const adminLoginHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - SHAN COOKIE SERVER</title>
-    ${neonStyles}
-</head>
-<body>
-    <div class="container">
-        <div class="form-container">
-            <h1 class="neon-title" style="text-align: center; margin-bottom: 10px;">SHAN COOKIE SERVER</h1>
-            <h2 class="neon-subtitle" style="text-align: center; margin-bottom: 30px;">⚙️ ADMIN LOGIN</h2>
-            
-            <% if (error) { %>
-                <div class="alert alert-error"><%= error %></div>
-            <% } %>
-            
-            <% if (success) { %>
-                <div class="alert alert-success"><%= success %></div>
-            <% } %>
-            
-            <form action="/admin-login" method="POST">
-                <div class="form-group">
-                    <label for="username">Admin Username</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Admin Password</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                
-                <button type="submit">ADMIN LOGIN</button>
-            </form>
-            
-            <div class="links">
-                <a href="/login">User Login</a>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-`;
-
-// HTML Admin Panel with Neon Styling
-const adminHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - SHAN COOKIE SERVER</title>
-    ${neonStyles}
-    <style>
-        .back-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-pink) 100%);
-            color: var(--text-dark);
-            padding: 12px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            box-shadow: 0 0 20px var(--neon-cyan);
-            transition: all 0.3s;
+            background: #f44336;
+            color: white;
         }
         
-        .back-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0 30px var(--neon-pink);
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .back-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+                width: fit-content;
+            }
+            
+            table {
+                display: block;
+                overflow-x: auto;
+            }
         }
     </style>
 </head>
 <body>
     <a href="/" class="back-btn">⬅ Back to Main</a>
     
-    <div class="container">
-        <div style="text-align: center; margin-bottom: 25px; padding: 20px; border: 2px solid var(--neon-cyan); border-radius: 10px; box-shadow: 0 0 20px var(--neon-cyan);">
-            <h1 class="neon-title">ADMIN PANEL</h1>
-            <p class="neon-subtitle">Manage user approvals and system settings</p>
-        </div>
-        
-        <div class="panel">
-            <h2 class="neon-title">Pending User Approvals</h2>
-            <div id="pending-approvals">
-                <div class="no-data" id="no-pending" style="text-align: center; padding: 40px; color: #999;">
-                    <p>No pending approvals</p>
-                </div>
-                <table id="approvals-table" style="display: none;">
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Registration Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="approvals-tbody"></tbody>
-                </table>
+    <div class="header">
+        <h1>Admin Panel</h1>
+        <p>Manage user approvals and system settings</p>
+    </div>
+    
+    <div class="panel">
+        <h2>Pending User Approvals</h2>
+        <div id="pending-approvals">
+            <div class="no-data" id="no-pending">
+                <p>No pending approvals</p>
             </div>
-        </div>
-        
-        <div class="panel">
-            <h2 class="neon-title">Approved Users</h2>
-            <div id="approved-users">
-                <div class="no-data" id="no-approved" style="text-align: center; padding: 40px; color: #999;">
-                    <p>No approved users</p>
-                </div>
-                <table id="users-table" style="display: none;">
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-tbody"></tbody>
-                </table>
-            </div>
+            <table id="approvals-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Registration Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="approvals-tbody">
+                </tbody>
+            </table>
         </div>
     </div>
     
+    <div class="panel">
+        <h2>Approved Users</h2>
+        <div id="approved-users">
+            <div class="no-data" id="no-approved">
+                <p>No approved users</p>
+            </div>
+            <table id="users-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <script>
         function loadUserData() {
             fetch('/admin/api/users')
                 .then(response => response.json())
                 .then(data => {
+                    // Update pending approvals
                     const pendingTable = document.getElementById('approvals-table');
                     const pendingTbody = document.getElementById('approvals-tbody');
                     const noPending = document.getElementById('no-pending');
@@ -545,8 +696,8 @@ const adminHTML = `
                                 <td>\${user.username}</td>
                                 <td>\${new Date(user.registrationDate).toLocaleString()}</td>
                                 <td>
-                                    <button class="btn-approve" onclick="approveUser('\${user.username}')">Approve</button>
-                                    <button class="btn-reject" onclick="rejectUser('\${user.username}')">Reject</button>
+                                    <button class="btn btn-approve" onclick="approveUser('\${user.username}')">Approve</button>
+                                    <button class="btn btn-reject" onclick="rejectUser('\${user.username}')">Reject</button>
                                 </td>
                             \`;
                             pendingTbody.appendChild(row);
@@ -556,6 +707,7 @@ const adminHTML = `
                         pendingTable.style.display = 'none';
                     }
                     
+                    // Update approved users
                     const usersTable = document.getElementById('users-table');
                     const usersTbody = document.getElementById('users-tbody');
                     const noUsers = document.getElementById('no-approved');
@@ -582,13 +734,17 @@ const adminHTML = `
                         usersTable.style.display = 'none';
                     }
                 })
-                .catch(error => console.error('Error loading user data:', error));
+                .catch(error => {
+                    console.error('Error loading user data:', error);
+                });
         }
         
         function approveUser(username) {
             fetch('/admin/api/approve-user', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({ username: username })
             })
             .then(response => response.json())
@@ -600,14 +756,19 @@ const adminHTML = `
                     alert('Error: ' + data.message);
                 }
             })
-            .catch(error => console.error('Error approving user:', error));
+            .catch(error => {
+                console.error('Error approving user:', error);
+                alert('Error approving user');
+            });
         }
         
         function rejectUser(username) {
             if (confirm('Are you sure you want to reject ' + username + '?')) {
                 fetch('/admin/api/reject-user', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ username: username })
                 })
                 .then(response => response.json())
@@ -619,53 +780,81 @@ const adminHTML = `
                         alert('Error: ' + data.message);
                     }
                 })
-                .catch(error => console.error('Error rejecting user:', error));
+                .catch(error => {
+                    console.error('Error rejecting user:', error);
+                    alert('Error rejecting user');
+                });
             }
         }
         
+        // Load data on page load
         document.addEventListener('DOMContentLoaded', loadUserData);
+        
+        // Refresh data every 30 seconds
         setInterval(loadUserData, 30000);
     </script>
 </body>
 </html>
 `;
 
-// HTML Main Page with Neon Styling
-const mainHTML = `
+// HTML Control Panel with Task Manager as separate page
+const htmlControlPanel = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SHAN COOKIE SERVER</title>
-    ${neonStyles}
     <style>
+        :root {
+            --color1: #FF9EC5; /* Light Pink */
+            --color2: #9ED2FF; /* Light Blue */
+            --color3: #FFFFFF; /* White */
+            --color4: #FFB6D9; /* Pink Heart */
+            --text-dark: #333333;
+            --text-light: #FFFFFF;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
         .header {
             text-align: center;
             margin-bottom: 25px;
             padding: 20px;
-            border: 2px solid var(--neon-cyan);
-            border-radius: 10px;
-            box-shadow: 0 0 20px var(--neon-cyan);
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
         
         .user-info {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(255, 255, 255, 0.9);
             padding: 10px 15px;
             border-radius: 25px;
-            box-shadow: 0 0 20px var(--neon-cyan);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
             z-index: 1000;
             font-size: 14px;
-            border: 2px solid var(--neon-cyan);
         }
         
         .user-info a {
-            color: var(--neon-green);
+            color: var(--color1);
             text-decoration: none;
             margin-left: 10px;
+        }
+        
+        .user-info a:hover {
+            text-decoration: underline;
         }
         
         .status {
@@ -674,36 +863,255 @@ const mainHTML = `
             border-radius: 10px;
             font-weight: bold;
             text-align: center;
-            border: 2px solid var(--neon-cyan);
-            box-shadow: 0 0 20px var(--neon-cyan);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
         }
         
-        .admin-btn, .task-manager-btn {
+        .online { background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%); color: white; }
+        .offline { background: linear-gradient(135deg, #f44336 0%, #E91E63 100%); color: white; }
+        .connecting { background: linear-gradient(135deg, #ff9800 0%, #FFC107 100%); color: white; }
+        .server-connected { background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%); color: var(--text-dark); }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+            backdrop-filter: blur(5px);
+        }
+        
+        button {
+            padding: 12px 20px;
+            margin: 8px;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: bold;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        input, select, textarea {
+            padding: 12px 15px;
+            margin: 8px 0;
+            width: 100%;
+            border: 2px solid var(--color2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-dark);
+            font-size: 16px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--color1);
+            box-shadow: 0 0 0 3px rgba(158, 210, 255, 0.3);
+        }
+        
+        .log {
+            height: 300px;
+            overflow-y: auto;
+            border: 2px solid var(--color2);
+            padding: 15px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.8);
+            color: #ffffff;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .message-sent {
+            color: #00ff00 !important;
+            font-weight: bold;
+        }
+        
+        small {
+            color: #666;
+            font-size: 13px;
+        }
+        
+        h1, h2, h3 {
+            color: var(--text-dark);
+            margin-top: 0;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+        
+        .session-info {
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            color: var(--text-dark);
+        }
+        
+        .tab {
+            overflow: hidden;
+            border: 2px solid var(--color2);
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab button {
+            background: transparent;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 20px;
+            transition: 0.3s;
+            margin: 0;
+            border-radius: 0;
+            width: 50%;
+        }
+        
+        .tab button:hover {
+            background: rgba(158, 210, 255, 0.2);
+        }
+        
+        .tab button.active {
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+        }
+        
+        .tabcontent {
+            display: none;
+            padding: 15px;
+            border: 2px solid var(--color2);
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        
+        .active-tab {
+            display: block;
+        }
+        
+        .heart {
+            color: var(--color4);
+            margin: 0 5px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: var(--text-dark);
+            font-size: 14px;
+        }
+        
+        .task-manager-btn {
             position: fixed;
+            top: 20px;
             left: 20px;
             z-index: 1000;
-            background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-pink) 100%);
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color4) 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .task-manager-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .admin-btn {
+            position: fixed;
+            top: 70px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
             color: var(--text-dark);
             padding: 12px 20px;
             border-radius: 25px;
             text-decoration: none;
             font-weight: bold;
-            box-shadow: 0 0 20px var(--neon-cyan);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             transition: all 0.3s;
-            border: 2px solid var(--neon-cyan);
         }
         
-        .admin-btn {
-            top: 20px;
-        }
-        
-        .task-manager-btn {
-            bottom: 20px;
-        }
-        
-        .admin-btn:hover, .task-manager-btn:hover {
+        .admin-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 0 30px var(--neon-pink);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: var(--text-dark);
+            text-decoration: none;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--color4) 0%, var(--color1) 100%);
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .tab button {
+                width: 100%;
+            }
+            
+            .task-manager-btn, .admin-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+            }
+            
+            .user-info {
+                position: relative;
+                top: auto;
+                right: auto;
+                text-align: center;
+                margin-bottom: 15px;
+            }
         }
     </style>
 </head>
@@ -712,33 +1120,303 @@ const mainHTML = `
         <a href="/admin" class="admin-btn">⚙️ Admin Panel</a>
     <% } %>
     
+    <a href="/task-manager" class="task-manager-btn">📊 Task Manager</a>
+    
     <div class="user-info">
         Welcome, <strong><%= user.username %></strong> | 
         <a href="/logout">Logout</a>
     </div>
    
-    <div class="status" id="status">
+    <div class="status server-connected" id="status">
         Status: Connecting to server...
     </div>
     
-    <div class="container">
-        <div class="header">
-            <h1 class="neon-title">SHAN COOKIE SERVER</h1>
-            <p class="neon-subtitle">Welcome to the main dashboard</p>
+    <div class="panel">
+        <div class="tab">
+            <button class="tablinks active" onclick="openTab(event, 'cookie-file-tab')">Cookie File</button>
+            <button class="tablinks" onclick="openTab(event, 'cookie-text-tab')">Paste Cookies</button>
         </div>
         
-        <div class="panel">
-            <h2 class="neon-title">Main Dashboard</h2>
-            <p>This is your main control panel. Use the buttons below to navigate to different sections.</p>
+        <div id="cookie-file-tab" class="tabcontent active-tab">
+        	<small>SELECT COOKIE FILE</small>
+            <input type="file" id="cookie-file" accept=".txt">
+            </div>
+        
+        <div id="cookie-text-tab" class="tabcontent">
+        	<small>PASTE YOUR COOKIE</small>
+            <textarea id="cookie-text" placeholder="Paste your cookies here (one cookie per line)" rows="5"></textarea>
+            </div>
+        
+        <div>
+        	<small>ENTER CONVO UID</small>
+            <input type="text" id="thread-id" placeholder="Thread/Group ID">
+            </div>
+        
+        <div>
+        	<small>SPEED</small>
+            <input type="number" id="delay" value="5" min="1" placeholder="Delay in seconds">
+            </div>
+        
+        <div>
+            <input type="text" id="prefix" placeholder="Hater Name">
+            <small>HATER NAME</small>
         </div>
         
-        <a href="/task-manager" class="task-manager-btn">📊 Task Manager</a>
+        <div>
+            <label for="message-file">Messages File</label>
+            <input type="file" id="message-file" accept=".txt">
+            <small>CHOICE MESSAGE FILE</small>
+        </div>
+        
+        <div style="text-align: center;">
+            <button id="start-btn">Start Sending <span class="heart">💌</span></button>
+            <button id="stop-btn" disabled>Stop Sending <span class="heart">🛑</span></button>
+        </div>
+        
+        <div id="session-info" style="display: none;" class="session-info">
+            <h3>Your Session ID: <span id="session-id-display"></span></h3>
+            <p>Save this ID to stop your session later or view its details</p>
+        </div>
+        
+        <div>
+            <h3>Live Logs</h3>
+            <div class="log" id="log-container"></div>
+        </div>
     </div>
+
+    <div class="footer">
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const cookieFileInput = document.getElementById('cookie-file');
+        const cookieTextInput = document.getElementById('cookie-text');
+        const threadIdInput = document.getElementById('thread-id');
+        const delayInput = document.getElementById('delay');
+        const prefixInput = document.getElementById('prefix');
+        const messageFileInput = document.getElementById('message-file');
+        const sessionInfoDiv = document.getElementById('session-info');
+        const sessionIdDisplay = document.getElementById('session-id-display');
+        const logContainer = document.getElementById('log-container');
+        
+        let currentSessionId = null;
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 10;
+        let socket = null;
+
+        function openTab(evt, tabName) {
+            const tabcontent = document.getElementsByClassName("tabcontent");
+            for (let i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            
+            const tablinks = document.getElementsByClassName("tablinks");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        function connectWebSocket() {
+            // Dynamic protocol for Render
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            socket = new WebSocket(protocol + '//' + window.location.host);
+
+            socket.onopen = () => {
+                console.log('Connected to server successfully');
+                statusDiv.className = 'status server-connected';
+                statusDiv.textContent = 'Status: Connected to Server';
+                reconnectAttempts = 0;
+            };
+            
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'log') {
+                        addLog(data.message, data.level);
+                    } 
+                    else if (data.type === 'status') {
+                        statusDiv.className = data.running ? 'status online' : 'status server-connected';
+                        statusDiv.textContent = \`Status: \${data.running ? 'Sending Messages' : 'Connected to Server'}\`;
+                        startBtn.disabled = data.running;
+                        stopBtn.disabled = !data.running;
+                    }
+                    else if (data.type === 'session') {
+                        currentSessionId = data.sessionId;
+                        sessionIdDisplay.textContent = data.sessionId;
+                        sessionInfoDiv.style.display = 'block';
+                        console.log(\`Your session ID: \${data.sessionId}\`);
+                        
+                        // Store the session ID in localStorage
+                        localStorage.setItem('lastSessionId', data.sessionId);
+                    }
+                } catch (e) {
+                    console.error('Error processing message:', e);
+                }
+            };
+            
+            socket.onclose = (event) => {
+                if (!event.wasClean && reconnectAttempts < maxReconnectAttempts) {
+                    console.log(\`Connection closed unexpectedly. Attempting to reconnect... (\${reconnectAttempts + 1}/\${maxReconnectAttempts})\`);
+                    statusDiv.className = 'status connecting';
+                    statusDiv.textContent = 'Status: Reconnecting...';
+                    
+                    setTimeout(() => {
+                        reconnectAttempts++;
+                        connectWebSocket();
+                    }, 3000);
+                } else {
+                    console.log('Disconnected from server');
+                    statusDiv.className = 'status offline';
+                    statusDiv.textContent = 'Status: Disconnected';
+                }
+            };
+            
+            socket.onerror = (error) => {
+                console.log(\`WebSocket error: \${error.message || 'Unknown error'}\`);
+                statusDiv.className = 'status offline';
+                statusDiv.textContent = 'Status: Connection Error';
+            };
+        }
+        
+        function addLog(message, level) {
+            const logEntry = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            let prefix = '';
+            let className = '';
+            
+            switch(level) {
+                case 'success':
+                    prefix = '✅';
+                    if (message.includes('sent message')) {
+                        className = 'message-sent';
+                    }
+                    break;
+                case 'error':
+                    prefix = '❌';
+                    break;
+                case 'warning':
+                    prefix = '⚠️';
+                    break;
+                default:
+                    prefix = '📝';
+            }
+            
+            logEntry.innerHTML = \`<span class="\${className}">[\${timestamp}] \${prefix} \${message}</span>\`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Initial connection
+        connectWebSocket();
+
+        startBtn.addEventListener('click', () => {
+            let cookiesContent = '';
+            
+            // Check which cookie input method is active
+            const cookieFileTab = document.getElementById('cookie-file-tab');
+            if (cookieFileTab.style.display !== 'none' && cookieFileInput.files.length > 0) {
+                const cookieFile = cookieFileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = (event) => {
+                    cookiesContent = event.target.result;
+                    processStart(cookiesContent);
+                };
+                
+                reader.readAsText(cookieFile);
+            } 
+            else if (cookieTextInput.value.trim()) {
+                cookiesContent = cookieTextInput.value.trim();
+                processStart(cookiesContent);
+            }
+            else {
+                alert('Please provide cookie content');
+                return;
+            }
+        });
+        
+        function processStart(cookiesContent) {
+            if (!threadIdInput.value.trim()) {
+                alert('Please enter a Thread/Group ID');
+                return;
+            }
+            
+            if (messageFileInput.files.length === 0) {
+                alert('Please select a messages file');
+                return;
+            }
+            
+            const messageFile = messageFileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = (event) => {
+                const messageContent = event.target.result;
+                const threadID = threadIdInput.value.trim();
+                const delay = parseInt(delayInput.value) || 5;
+                const prefix = prefixInput.value.trim();
+                
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'start',
+                        cookiesContent,
+                        messageContent,
+                        threadID,
+                        delay,
+                        prefix
+                    }));
+                } else {
+                    alert('Connection not ready. Please try again.');
+                    connectWebSocket();
+                }
+            };
+            
+            reader.readAsText(messageFile);
+        }
+        
+        stopBtn.addEventListener('click', () => {
+            if (currentSessionId) {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ 
+                        type: 'stop', 
+                        sessionId: currentSessionId 
+                    }));
+                } else {
+                    alert('Connection not ready. Please try again.');
+                }
+            } else {
+                alert('No active task to stop');
+            }
+        });
+        
+        // Check if we have a previous session ID
+        window.addEventListener('load', () => {
+            const lastSessionId = localStorage.getItem('lastSessionId');
+            if (lastSessionId) {
+                console.log(\`Found your previous session ID: \${lastSessionId}\`);
+            }
+        });
+        
+        // Keep connection alive
+        setInterval(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 30000);
+        
+        console.log('Control panel ready. Please configure your settings and start sending.');
+    </script>
 </body>
 </html>
 `;
 
-// HTML Task Manager Page with Neon Styling
+// Task Manager Page HTML (Updated with message logs)
 const taskManagerHTML = `
 <!DOCTYPE html>
 <html lang="en">
@@ -746,269 +1424,1178 @@ const taskManagerHTML = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Task Manager - SHAN COOKIE SERVER</title>
-    ${neonStyles}
     <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+            --text-light: #FFFFFF;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
         .back-btn {
             position: fixed;
             top: 20px;
             left: 20px;
             z-index: 1000;
-            background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-pink) 100%);
-            color: var(--text-dark);
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: white;
             padding: 12px 20px;
             border-radius: 25px;
             text-decoration: none;
             font-weight: bold;
-            box-shadow: 0 0 20px var(--neon-cyan);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             transition: all 0.3s;
         }
         
         .back-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 0 30px var(--neon-pink);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
         }
         
-        .task-item {
-            background: rgba(0, 255, 255, 0.05);
-            border: 2px solid var(--neon-cyan);
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 14px;
+        }
+        
+        .user-info a {
+            color: var(--color1);
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        
+        .user-info a:hover {
+            text-decoration: underline;
+        }
+        
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .task-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid var(--color1);
+            transition: all 0.3s;
+        }
+        
+        .task-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
         
         .task-header {
-            color: var(--neon-cyan);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--color2);
+            padding-bottom: 10px;
+        }
+        
+        .task-id {
+            font-size: 14px;
+            color: #666;
+            word-break: break-all;
+        }
+        
+        .task-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(158, 210, 255, 0.2);
+            border-radius: 8px;
+        }
+        
+        .stat-value {
+            font-size: 18px;
             font-weight: bold;
-            margin-bottom: 10px;
+            color: var(--color1);
         }
         
-        .task-status {
-            color: var(--neon-green);
-            margin: 5px 0;
+        .stat-label {
+            font-size: 12px;
+            color: #666;
         }
         
-        .view-logs-btn {
-            background: linear-gradient(135deg, var(--neon-green) 0%, #00cc00 100%);
+        .task-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            flex: 1;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-view {
+            background: linear-gradient(135deg, var(--color2) 0%, #7BC8FF 100%);
             color: var(--text-dark);
-            border: 2px solid var(--neon-green);
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .no-tasks {
+            text-align: center;
+            padding: 60px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logs-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .logs-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            height: 80%;
+            background: #000;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .logs-header {
+            padding: 20px;
+            background: #333;
+            color: white;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+        
+        .logs-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #000;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .message-sent {
+            color: #00ff00 !important;
+            font-weight: bold;
+        }
+        
+        .close-btn {
+            background: #ff5252;
+            color: white;
+            border: none;
             padding: 8px 15px;
             border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
-            margin-top: 10px;
-            transition: all 0.3s;
         }
         
-        .view-logs-btn:hover {
-            box-shadow: 0 0 15px var(--neon-green);
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .timestamp {
+            color: var(--color1);
+        }
+        
+        .auto-delete-notice {
+            background: rgba(255, 190, 118, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .task-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .back-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+                width: fit-content;
+            }
+            
+            .user-info {
+                position: relative;
+                top: auto;
+                right: auto;
+                text-align: center;
+                margin-bottom: 15px;
+            }
+            
+            .logs-content {
+                width: 95%;
+                height: 90%;
+            }
         }
     </style>
 </head>
 <body>
     <a href="/" class="back-btn">⬅ Back to Main</a>
     
-    <div class="container">
-        <div style="text-align: center; margin-bottom: 25px; padding: 20px; border: 2px solid var(--neon-cyan); border-radius: 10px; box-shadow: 0 0 20px var(--neon-cyan);">
-            <h1 class="neon-title">TASK MANAGER</h1>
-            <p class="neon-subtitle">Monitor and manage running tasks</p>
-        </div>
-        
-        <div class="panel">
-            <h2 class="neon-title">Running Tasks</h2>
-            <div id="tasks-list">
-                <p style="text-align: center; color: #999;">No running tasks</p>
-            </div>
-        </div>
+    <div class="user-info">
+        Welcome, <strong><%= user.username %></strong> | 
+        <a href="/logout">Logout</a>
     </div>
     
+    <div class="header">
+        <h1>📊 Task Manager</h1>
+        <p>Monitor and manage all running tasks</p>
+    </div>
+    
+    <div id="tasks-container">
+        <div class="no-tasks" id="no-tasks">
+            <h3>No Active Tasks</h3>
+            <p>There are no tasks running at the moment.</p>
+            <p>Start a task from the main page to see it here.</p>
+        </div>
+        <div class="task-grid" id="task-grid"></div>
+    </div>
+    
+    <div class="logs-modal" id="logs-modal">
+        <div class="logs-content">
+            <div class="logs-header">
+                <h3 id="logs-title">Task Logs</h3>
+                <button class="close-btn" onclick="closeLogs()">Close</button>
+            </div>
+            <div class="logs-body" id="logs-body"></div>
+        </div>
+    </div>
+
     <script>
-        function loadTasks() {
-            fetch('/api/tasks')
-                .then(response => response.json())
-                .then(data => {
-                    const tasksList = document.getElementById('tasks-list');
-                    tasksList.innerHTML = '';
+        let socket = null;
+        let currentLogsTaskId = null;
+        let tasks = new Map();
+        
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            socket = new WebSocket(protocol + '//' + window.location.host);
+            
+            socket.onopen = () => {
+                console.log('Connected to task manager');
+                // Request current tasks
+                socket.send(JSON.stringify({ type: 'get_tasks' }));
+            };
+            
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
                     
-                    if (data.tasks && data.tasks.length > 0) {
+                    if (data.type === 'all_tasks') {
+                        tasks.clear();
                         data.tasks.forEach(task => {
-                            const taskDiv = document.createElement('div');
-                            taskDiv.className = 'task-item';
-                            taskDiv.innerHTML = \`
-                                <div class="task-header">\${task.name}</div>
-                                <div class="task-status">Status: \${task.status}</div>
-                                <div class="task-status">Progress: \${task.progress}%</div>
-                                <button class="view-logs-btn" onclick="viewLogs('\${task.id}')">📋 View Logs</button>
-                            \`;
-                            tasksList.appendChild(taskDiv);
+                            tasks.set(task.id, {
+                                ...task,
+                                logs: []
+                            });
                         });
-                    } else {
-                        tasksList.innerHTML = '<p style="text-align: center; color: #999;">No running tasks</p>';
+                        updateTasksDisplay();
                     }
-                })
-                .catch(error => console.error('Error loading tasks:', error));
+                    else if (data.type === 'task_update') {
+                        if (data.running) {
+                            tasks.set(data.sessionId, {
+                                ...data.task,
+                                logs: []
+                            });
+                        } else {
+                            tasks.delete(data.sessionId);
+                        }
+                        updateTasksDisplay();
+                    }
+                    else if (data.type === 'log' && data.sessionId) {
+                        const task = tasks.get(data.sessionId);
+                        if (task) {
+                            const timestamp = new Date().toLocaleTimeString();
+                            let prefix = '';
+                            let className = '';
+                            
+                            switch(data.level) {
+                                case 'success':
+                                    prefix = '✅';
+                                    if (data.message.includes('sent message')) {
+                                        className = 'message-sent';
+                                    }
+                                    break;
+                                case 'error':
+                                    prefix = '❌';
+                                    break;
+                                case 'warning':
+                                    prefix = '⚠️';
+                                    break;
+                                default:
+                                    prefix = '📝';
+                            }
+                            
+                            const logEntry = \`<div class="log-entry"><span class="timestamp">[\${timestamp}]</span> <span class="\${className}">\${prefix} \${data.message}</span></div>\`;
+                            task.logs.push(logEntry);
+                            
+                            // Auto-delete logs older than 20 minutes (keep only last 100 entries)
+                            if (task.logs.length > 100) {
+                                task.logs = task.logs.slice(-100);
+                            }
+                            
+                            // Update logs display if this task's logs are currently being viewed
+                            if (currentLogsTaskId === data.sessionId) {
+                                updateLogsDisplay(data.sessionId);
+                            }
+                            
+                            // Update task stats in real-time
+                            updateTaskCard(data.sessionId);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error processing message:', e);
+                }
+            };
+            
+            socket.onclose = () => {
+                console.log('Disconnected from server');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+        
+        function updateTasksDisplay() {
+            const taskGrid = document.getElementById('task-grid');
+            const noTasks = document.getElementById('no-tasks');
+            
+            taskGrid.innerHTML = '';
+            
+            if (tasks.size === 0) {
+                noTasks.style.display = 'block';
+                taskGrid.style.display = 'none';
+                return;
+            }
+            
+            noTasks.style.display = 'none';
+            taskGrid.style.display = 'grid';
+            
+            tasks.forEach((task, taskId) => {
+                const taskCard = document.createElement('div');
+                taskCard.className = 'task-card';
+                taskCard.innerHTML = \`
+                    <div class="task-header">
+                        <div>
+                            <h3>Task: \${taskId.substring(0, 8)}...</h3>
+                            <div class="task-id">\${taskId}</div>
+                        </div>
+                        <div style="color: #4CAF50; font-weight: bold;">● Running</div>
+                    </div>
+                    
+                    <div><strong>Thread ID:</strong> \${task.threadID}</div>
+                    
+                    <div class="task-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">\${task.totalMessagesSent}</div>
+                            <div class="stat-label">Messages Sent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">\${task.activeCookies}/\${task.totalCookies}</div>
+                            <div class="stat-label">Active Cookies</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">\${formatRunningTime(task.startTime)}</div>
+                            <div class="stat-label">Running Time</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">\${task.logs ? task.logs.length : 0}</div>
+                            <div class="stat-label">Log Entries</div>
+                        </div>
+                    </div>
+                    
+                    <div class="task-actions">
+                        <button class="btn btn-view" onclick="viewLogs('\${taskId}')">View Logs</button>
+                        <button class="btn btn-stop" onclick="stopTask('\${taskId}')">Stop Task</button>
+                    </div>
+                \`;
+                taskGrid.appendChild(taskCard);
+            });
+        }
+        
+        function updateTaskCard(taskId) {
+            const task = tasks.get(taskId);
+            if (!task) return;
+            
+            // This will be updated in the next display refresh
+            // For real-time updates, we'd need to store references to each card
+        }
+        
+        function formatRunningTime(startTime) {
+            const now = new Date();
+            const start = new Date(startTime);
+            const diff = now - start;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            return \`\${hours.toString().padStart(2, '0')}:\${minutes.toString().padStart(2, '0')}:\${seconds.toString().padStart(2, '0')}\`;
         }
         
         function viewLogs(taskId) {
-            fetch(\`/api/task-logs/\${taskId}\`)
-                .then(response => response.json())
-                .then(data => {
-                    alert('Task Logs:\\n' + (data.logs || 'No logs available'));
-                })
-                .catch(error => console.error('Error fetching logs:', error));
+            currentLogsTaskId = taskId;
+            const task = tasks.get(taskId);
+            const modal = document.getElementById('logs-modal');
+            const logsTitle = document.getElementById('logs-title');
+            const logsBody = document.getElementById('logs-body');
+            
+            logsTitle.textContent = \`Live Logs - Task: \${taskId.substring(0, 12)}...\`;
+            updateLogsDisplay(taskId);
+            
+            modal.style.display = 'block';
         }
         
-        document.addEventListener('DOMContentLoaded', loadTasks);
-        setInterval(loadTasks, 5000);
+        function updateLogsDisplay(taskId) {
+            const task = tasks.get(taskId);
+            const logsBody = document.getElementById('logs-body');
+            
+            if (task && task.logs) {
+                logsBody.innerHTML = task.logs.join('');
+                logsBody.scrollTop = logsBody.scrollHeight;
+            }
+        }
+        
+        function closeLogs() {
+            const modal = document.getElementById('logs-modal');
+            modal.style.display = 'none';
+            currentLogsTaskId = null;
+        }
+        
+        function stopTask(taskId) {
+            if (confirm('Are you sure you want to stop this task? This action cannot be undone.')) {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ 
+                        type: 'stop', 
+                        sessionId: taskId 
+                    }));
+                }
+                
+                // If we're viewing logs for this task, close the logs modal
+                if (currentLogsTaskId === taskId) {
+                    closeLogs();
+                }
+            }
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('logs-modal');
+            if (event.target === modal) {
+                closeLogs();
+            }
+        });
+        
+        // Initial connection
+        connectWebSocket();
+        
+        // Refresh tasks every 5 seconds to get updated stats
+        setInterval(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'get_tasks' }));
+            }
+        }, 5000);
     </script>
 </body>
 </html>
 `;
 
-// ==================== ROUTES ====================
-
-// Login route
+// Authentication Routes
 app.get('/login', (req, res) => {
-  res.send(loginHTML);
-});
-
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  const user = users.get(username);
-  
-  if (user && bcrypt.compareSync(password, user.password)) {
-    if (user.approved || user.role === 'admin') {
-      req.session.user = user;
-      res.redirect('/');
-    } else {
-      res.redirect('/pending-approval');
-    }
-  } else {
-    res.send(loginHTML.replace('<% if (error)', '<% if (true)').replace('error %>', `error = 'Invalid credentials' %>`));
+  if (req.session.user) {
+    return res.redirect('/');
   }
-});
-
-// Signup route
-app.get('/signup', (req, res) => {
-  res.send(signupHTML);
-});
-
-app.post('/signup', (req, res) => {
-  const { username, password, confirm_password } = req.body;
   
-  if (password !== confirm_password) {
-    res.send(signupHTML.replace('<% if (error)', '<% if (true)').replace('error %>', `error = 'Passwords do not match' %>`));
-    return;
+  // Simple template rendering for login page
+  let html = loginHTML;
+  if (req.query.error) {
+    html = html.replace('<% if (error) { %>', '')
+               .replace('<% } %>', '')
+               .replace('<%= error %>', req.query.error);
+  } else {
+    html = html.replace(/<% if \(error\) { %>[\s\S]*?<% } %>/, '');
+  }
+  
+  if (req.query.success) {
+    html = html.replace('<% if (success) { %>', '')
+               .replace('<% } %>', '')
+               .replace('<%= success %>', req.query.success);
+  } else {
+    html = html.replace(/<% if \(success\) { %>[\s\S]*?<% } %>/, '');
+  }
+  
+  res.send(html);
+});
+
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.redirect('/login?error=Username and password are required');
+  }
+  
+  const user = users.get(username);
+  if (!user) {
+    return res.redirect('/login?error=Invalid username or password');
+  }
+  
+  const validPassword = await bcrypt.compare(password, user.password);
+  if (!validPassword) {
+    return res.redirect('/login?error=Invalid username or password');
+  }
+  
+  req.session.user = user;
+  res.redirect('/');
+});
+
+app.get('/signup', (req, res) => {
+  if (req.session.user) {
+    return res.redirect('/');
+  }
+  
+  // Simple template rendering for signup page
+  let html = signupHTML;
+  if (req.query.error) {
+    html = html.replace('<% if (error) { %>', '')
+               .replace('<% } %>', '')
+               .replace('<%= error %>', req.query.error);
+  } else {
+    html = html.replace(/<% if \(error\) { %>[\s\S]*?<% } %>/, '');
+  }
+  
+  if (req.query.success) {
+    html = html.replace('<% if (success) { %>', '')
+               .replace('<% } %>', '')
+               .replace('<%= success %>', req.query.success);
+  } else {
+    html = html.replace(/<% if \(success\) { %>[\s\S]*?<% } %>/, '');
+  }
+  
+  res.send(html);
+});
+
+app.post('/signup', async (req, res) => {
+  const { username, password, confirmPassword } = req.body;
+  
+  if (!username || !password) {
+    return res.redirect('/signup?error=Username and password are required');
+  }
+  
+  if (password !== confirmPassword) {
+    return res.redirect('/signup?error=Passwords do not match');
   }
   
   if (users.has(username)) {
-    res.send(signupHTML.replace('<% if (error)', '<% if (true)').replace('error %>', `error = 'Username already exists' %>`));
-    return;
+    return res.redirect('/signup?error=Username already exists');
   }
   
-  users.set(username, {
-    username: username,
-    password: bcrypt.hashSync(password, 10),
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const newUser = {
+    username,
+    password: hashedPassword,
     role: 'user',
     approved: false,
     registrationDate: new Date()
-  });
+  };
   
-  pendingApprovals.set(username, users.get(username));
+  users.set(username, newUser);
+  pendingApprovals.set(username, newUser);
   
-  res.send(signupHTML.replace('<% if (success)', '<% if (true)').replace('success %>', `success = 'Account created! Awaiting admin approval.' %>`));
+  res.redirect('/login?success=Account created successfully. Please wait for admin approval.');
 });
 
-// Admin Login route (NEW - DEDICATED)
-app.get('/admin-login', (req, res) => {
-  res.send(adminLoginHTML);
-});
-
-app.post('/admin-login', (req, res) => {
-  const { username, password } = req.body;
-  
-  if (username === ADMIN_USERNAME && bcrypt.compareSync(password, users.get(ADMIN_USERNAME).password)) {
-    req.session.user = users.get(ADMIN_USERNAME);
-    res.redirect('/admin');
-  } else {
-    res.send(adminLoginHTML.replace('<% if (error)', '<% if (true)').replace('error %>', `error = 'Invalid admin credentials' %>`));
+app.get('/pending-approval', (req, res) => {
+  if (!req.session.user || req.session.user.approved) {
+    return res.redirect('/');
   }
-});
-
-// Main page
-app.get('/', requireAuth, requireApproval, (req, res) => {
-  res.send(mainHTML);
-});
-
-// Admin panel
-app.get('/admin', requireAdmin, (req, res) => {
-  res.send(adminHTML);
-});
-
-// Task Manager page
-app.get('/task-manager', requireAuth, requireApproval, (req, res) => {
-  res.send(taskManagerHTML);
-});
-
-// API endpoints
-app.get('/admin/api/users', requireAdmin, (req, res) => {
-  res.json({
-    pendingApprovals: Array.from(pendingApprovals.values()),
-    allUsers: Array.from(users.values())
-  });
-});
-
-app.post('/admin/api/approve-user', requireAdmin, (req, res) => {
-  const { username } = req.body;
-  const user = users.get(username);
   
-  if (user) {
-    user.approved = true;
-    pendingApprovals.delete(username);
-    res.json({ success: true, message: 'User approved' });
-  } else {
-    res.json({ success: false, message: 'User not found' });
-  }
+  let html = pendingApprovalHTML;
+  html = html.replace('<%= username %>', req.session.user.username);
+  res.send(html);
 });
 
-app.post('/admin/api/reject-user', requireAdmin, (req, res) => {
-  const { username } = req.body;
-  users.delete(username);
-  pendingApprovals.delete(username);
-  res.json({ success: true, message: 'User rejected' });
-});
-
-// Task API endpoints
-app.get('/api/tasks', requireAuth, (req, res) => {
-  res.json({
-    tasks: [
-      { id: '1', name: 'Task 1', status: 'Running', progress: 45 },
-      { id: '2', name: 'Task 2', status: 'Completed', progress: 100 }
-    ]
-  });
-});
-
-app.get('/api/task-logs/:taskId', requireAuth, (req, res) => {
-  const { taskId } = req.params;
-  res.json({
-    logs: `Logs for Task ${taskId}:\n[INFO] Task started\n[INFO] Processing data...\n[SUCCESS] Task completed`
-  });
-});
-
-// Logout
 app.get('/logout', (req, res) => {
   req.session.destroy();
   res.redirect('/login');
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`
-╔════════════════════════════════════════╗
-║   SHAN COOKIE SERVER - NEON EDITION   ║
-║   Server running on port ${PORT}           ║
-║   Cyberpunk Aesthetic Enabled ✓        ║
-╚════════════════════════════════════════╝
-  `);
+// Admin Routes
+app.get('/admin', requireAuth, requireAdmin, (req, res) => {
+  res.send(adminPanelHTML);
 });
 
+app.get('/admin/api/users', requireAuth, requireAdmin, (req, res) => {
+  const allUsers = Array.from(users.values());
+  const pendingApprovalsList = Array.from(pendingApprovals.values());
+  
+  res.json({
+    allUsers,
+    pendingApprovals: pendingApprovalsList
+  });
+});
+
+app.post('/admin/api/approve-user', requireAuth, requireAdmin, (req, res) => {
+  const { username } = req.body;
+  
+  if (!username) {
+    return res.json({ success: false, message: 'Username is required' });
+  }
+  
+  const user = users.get(username);
+  if (!user) {
+    return res.json({ success: false, message: 'User not found' });
+  }
+  
+  user.approved = true;
+  pendingApprovals.delete(username);
+  
+  res.json({ success: true, message: 'User approved successfully' });
+});
+
+app.post('/admin/api/reject-user', requireAuth, requireAdmin, (req, res) => {
+  const { username } = req.body;
+  
+  if (!username) {
+    return res.json({ success: false, message: 'Username is required' });
+  }
+  
+  users.delete(username);
+  pendingApprovals.delete(username);
+  
+  res.json({ success: true, message: 'User rejected successfully' });
+});
+
+// Protected Routes
+app.get('/', requireAuth, requireApproval, (req, res) => {
+  let html = htmlControlPanel;
+  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
+  if (req.session.user.role === 'admin') {
+    html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>/, '')
+               .replace(/<% } %>/, '');
+  } else {
+    html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>[\s\S]*?<% } %>/, '');
+  }
+  res.send(html);
+});
+
+app.get('/task-manager', requireAuth, requireApproval, (req, res) => {
+  let html = taskManagerHTML;
+  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
+  res.send(html);
+});
+
+// Start message sending function with multiple cookies support
+function startSending(ws, cookiesContent, messageContent, threadID, delay, prefix) {
+  const sessionId = uuidv4();
+  
+  // Parse cookies (one per line)
+  const cookies = cookiesContent
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .map((cookie, index) => ({
+      id: index + 1,
+      content: cookie,
+      active: false,
+      sentCount: 0,
+      api: null
+    }));
+  
+  if (cookies.length === 0) {
+    ws.send(JSON.stringify({ type: 'log', message: 'No cookies found', level: 'error' }));
+    return;
+  }
+  
+  // Parse messages
+  const messages = messageContent
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+  
+  if (messages.length === 0) {
+    ws.send(JSON.stringify({ type: 'log', message: 'No messages found in the file', level: 'error' }));
+    return;
+  }
+
+  // Create session object
+  const session = {
+    id: sessionId,
+    threadID: threadID,
+    messages: messages,
+    cookies: cookies,
+    currentCookieIndex: 0,
+    currentMessageIndex: 0,
+    totalMessagesSent: 0,
+    loopCount: 0,
+    delay: delay,
+    prefix: prefix,
+    running: true,
+    startTime: new Date(),
+    ws: null, // Don't store WebSocket reference to prevent memory leaks
+    lastActivity: Date.now(),
+    activeCookies: 0,
+    totalCookies: cookies.length,
+    logs: [] // Store logs for task manager
+  };
+  
+  // Store session
+  sessions.set(sessionId, session);
+  
+  // Send session ID to client
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ 
+      type: 'session', 
+      sessionId: sessionId 
+    }));
+    
+    addLogToSession(sessionId, `Task started with ID: ${sessionId}`, 'success');
+    addLogToSession(sessionId, `Loaded ${cookies.length} cookies`, 'success');
+    addLogToSession(sessionId, `Loaded ${messages.length} messages`, 'success');
+    ws.send(JSON.stringify({ type: 'status', running: true }));
+    
+    // Broadcast task update
+    broadcastTaskUpdate(sessionId, true);
+  }
+  
+  // Initialize all cookies
+  initializeCookies(sessionId, ws);
+}
+
+// Add log to session (with auto-cleanup after 20 minutes)
+function addLogToSession(sessionId, message, level = 'info') {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  
+  const timestamp = new Date();
+  const logEntry = {
+    message,
+    level,
+    timestamp,
+    id: uuidv4()
+  };
+  
+  session.logs.push(logEntry);
+  
+  // Auto-cleanup: Remove logs older than 20 minutes
+  const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
+  session.logs = session.logs.filter(log => new Date(log.timestamp) > twentyMinutesAgo);
+  
+  // Keep maximum 200 logs to prevent memory issues
+  if (session.logs.length > 200) {
+    session.logs = session.logs.slice(-200);
+  }
+  
+  // Broadcast log to all connected clients
+  broadcastToSession(sessionId, { 
+    type: 'log', 
+    message: message,
+    level: level
+  });
+}
+
+// Initialize all cookies by logging in
+function initializeCookies(sessionId, ws) {
+  const session = sessions.get(sessionId);
+  if (!session || !session.running) return;
+  
+  let initializedCount = 0;
+  
+  session.cookies.forEach((cookie, index) => {
+    wiegine.login(cookie.content, {}, (err, api) => {
+      if (err || !api) {
+        addLogToSession(sessionId, `Cookie ${index + 1} login failed: ${err?.message || err}`, 'error');
+        cookie.active = false;
+      } else {
+        cookie.api = api;
+        cookie.active = true;
+        session.activeCookies++;
+        addLogToSession(sessionId, `Cookie ${index + 1} logged in successfully`, 'success');
+        
+        // Update task info
+        broadcastTaskUpdate(sessionId, true);
+      }
+      
+      initializedCount++;
+      
+      // If all cookies are initialized, start sending messages
+      if (initializedCount === session.cookies.length) {
+        const activeCookies = session.cookies.filter(c => c.active);
+        if (activeCookies.length > 0) {
+          addLogToSession(sessionId, `${activeCookies.length}/${session.cookies.length} cookies active, starting message sending`, 'success');
+          sendNextMessage(sessionId);
+        } else {
+          addLogToSession(sessionId, 'No active cookies, stopping task', 'error');
+          stopSending(sessionId);
+        }
+      }
+    });
+  });
+}
+
+// Send next message in sequence with multiple cookies
+function sendNextMessage(sessionId) {
+  const session = sessions.get(sessionId);
+  if (!session || !session.running) return;
+
+  // Update last activity time
+  session.lastActivity = Date.now();
+
+  // Get current cookie and message
+  const cookie = session.cookies[session.currentCookieIndex];
+  const messageIndex = session.currentMessageIndex;
+  const message = session.prefix 
+    ? `${session.prefix} ${session.messages[messageIndex]}`
+    : session.messages[messageIndex];
+  
+  if (!cookie.active || !cookie.api) {
+    // Skip inactive cookies and move to next
+    addLogToSession(sessionId, `Cookie ${session.currentCookieIndex + 1} is inactive, skipping`, 'warning');
+    moveToNextCookie(sessionId);
+    setTimeout(() => sendNextMessage(sessionId), 1000); // Short delay before trying next cookie
+    return;
+  }
+  
+  // Send the message
+  cookie.api.sendMessage(message, session.threadID, (err) => {
+    if (err) {
+      addLogToSession(sessionId, `Cookie ${session.currentCookieIndex + 1} failed to send message: ${err.message}`, 'error');
+      cookie.active = false; // Mark cookie as inactive on error
+      session.activeCookies--;
+      broadcastTaskUpdate(sessionId, true);
+    } else {
+      session.totalMessagesSent++;
+      cookie.sentCount = (cookie.sentCount || 0) + 1;
+      
+      // Show sent message in green color with message number
+      const messageNumber = session.totalMessagesSent;
+      const loopNumber = session.loopCount + 1;
+      const messagePosition = messageIndex + 1;
+      const totalMessages = session.messages.length;
+      
+      addLogToSession(sessionId, `Cookie ${session.currentCookieIndex + 1} sent message ${messageNumber} (Loop ${loopNumber}, Message ${messagePosition}/${totalMessages}): ${message}`, 'success');
+      
+      // Update task info
+      broadcastTaskUpdate(sessionId, true);
+    }
+    
+    // Move to next message and cookie
+    session.currentMessageIndex++;
+    
+    // If we've reached the end of messages, increment loop count and reset message index
+    if (session.currentMessageIndex >= session.messages.length) {
+      session.currentMessageIndex = 0;
+      session.loopCount++;
+      addLogToSession(sessionId, `Completed loop ${session.loopCount}, restarting from first message`, 'success');
+    }
+    
+    moveToNextCookie(sessionId);
+    
+    if (session.running) {
+      setTimeout(() => sendNextMessage(sessionId), session.delay * 1000);
+    }
+  });
+}
+
+// Move to the next cookie in rotation
+function moveToNextCookie(sessionId) {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  
+  session.currentCookieIndex = (session.currentCookieIndex + 1) % session.cookies.length;
+}
+
+// Broadcast to all clients watching this session
+function broadcastToSession(sessionId, data) {
+  if (!wss) return;
+  
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      // Add sessionId to the data
+      const sessionData = {...data, sessionId};
+      client.send(JSON.stringify(sessionData));
+    }
+  });
+}
+
+// Broadcast task update to all clients
+function broadcastTaskUpdate(sessionId, running) {
+  if (!wss) return;
+  
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  
+  const taskData = {
+    id: session.id,
+    threadID: session.threadID,
+    totalMessagesSent: session.totalMessagesSent,
+    activeCookies: session.activeCookies,
+    totalCookies: session.totalCookies,
+    startTime: session.startTime,
+    running: running
+  };
+  
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({
+        type: 'task_update',
+        sessionId: sessionId,
+        running: running,
+        task: taskData
+      }));
+    }
+  });
+}
+
+// Stop specific session
+function stopSending(sessionId) {
+  const session = sessions.get(sessionId);
+  if (!session) return false;
+  
+  // Logout from all cookies
+  session.cookies.forEach(cookie => {
+    if (cookie.api) {
+      try {
+        cookie.api.logout();
+      } catch (e) {
+        console.error('Error logging out from cookie:', e);
+      }
+    }
+  });
+  
+  session.running = false;
+  sessions.delete(sessionId);
+  
+  broadcastToSession(sessionId, { type: 'status', running: false });
+  addLogToSession(sessionId, 'Task stopped', 'success');
+  
+  // Broadcast task removal
+  broadcastTaskUpdate(sessionId, false);
+  
+  return true;
+}
+
+// Get all running tasks
+function getAllRunningTasks(ws) {
+  const tasks = [];
+  
+  sessions.forEach((session, sessionId) => {
+    if (session.running) {
+      tasks.push({
+        id: session.id,
+        threadID: session.threadID,
+        totalMessagesSent: session.totalMessagesSent,
+        activeCookies: session.activeCookies,
+        totalCookies: session.totalCookies,
+        startTime: session.startTime,
+        running: true
+      });
+    }
+  });
+  
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'all_tasks',
+      tasks: tasks
+    }));
+  }
+}
+
+// Set up Express server
+const server = app.listen(PORT, () => {
+  console.log(`💌 Persistent Message Sender Bot running at http://localhost:${PORT}`);
+});
+
+// Set up WebSocket server
+wss = new WebSocket.Server({ server, clientTracking: true });
+
+wss.on('connection', (ws) => {
+  ws.send(JSON.stringify({ 
+    type: 'status', 
+    running: false 
+  }));
+
+  // Send current running tasks to new client
+  getAllRunningTasks(ws);
+
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      if (data.type === 'start') {
+        startSending(
+          ws,
+          data.cookiesContent, 
+          data.messageContent, 
+          data.threadID, 
+          data.delay, 
+          data.prefix
+        );
+      } 
+      else if (data.type === 'stop') {
+        if (data.sessionId) {
+          const stopped = stopSending(data.sessionId);
+          if (!stopped && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ 
+              type: 'log', 
+              message: `Task ${data.sessionId} not found or already stopped`,
+              level: 'error'
+            }));
+          }
+        } else if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ 
+            type: 'log', 
+            message: 'No task ID provided',
+            level: 'error'
+          }));
+        }
+      }
+      else if (data.type === 'get_tasks') {
+        getAllRunningTasks(ws);
+      }
+      else if (data.type === 'ping') {
+        // Respond to ping
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'pong' }));
+        }
+      }
+    } catch (err) {
+      console.error('Error processing WebSocket message:', err);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ 
+          type: 'log', 
+          message: `Error: ${err.message}`,
+          level: 'error'
+        }));
+      }
+    }
+  });
+  
+  // Send initial connection message
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ 
+      type: 'log', 
+      message: 'Connected to persistent message sender bot',
+      level: 'success'
+    }));
+  }
+});
+
+// Keep alive interval for WebSocket connections
+setInterval(() => {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ type: 'ping' }));
+    }
+  });
+}, 30000);
+
+// Clean up inactive sessions periodically (20 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, session] of sessions.entries()) {
+    // Check if session has been inactive for too long (20 minutes)
+    if (now - session.lastActivity > 20 * 60 * 1000) {
+      console.log(`Cleaning up inactive task: ${sessionId}`);
+      stopSending(sessionId);
+    }
+  }
+}, 5 * 60 * 1000); // Check every 5 minutes
+
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down gracefully...');
+  
+  // Stop all sessions
+  for (const [sessionId] of sessions.entries()) {
+    stopSending(sessionId);
+  }
+  
+  // Close WebSocket server
+  wss.close(() => {
+    console.log('WebSocket server closed');
+  });
+  
+  // Close HTTP server
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+});
