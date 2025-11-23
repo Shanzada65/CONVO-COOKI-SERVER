@@ -3,7 +3,7 @@ const express = require('express');
 const wiegine = require('fca-mafiya');
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const session = require('express-session');
 
 // Initialize Express app
