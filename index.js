@@ -43,7 +43,7 @@ function requireAuth(req, res, next) {
   if (req.session.user) {
     next();
   } else {
-    res.redirect('/login');
+    res.redirect('/user-login');
   }
 }
 
@@ -3061,6 +3061,28 @@ app.get('/logout', (req, res) => {
   res.redirect('/user-login');
 });
 
+// Add default route to redirect to user login
+app.get('/', (req, res) => {
+  if (req.session.user) {
+    return res.redirect('/dashboard');
+  } else {
+    return res.redirect('/user-login');
+  }
+});
+
+// Dashboard route (main control panel)
+app.get('/dashboard', requireAuth, requireApproval, (req, res) => {
+  let html = htmlControlPanel;
+  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
+  if (req.session.user.role === 'admin') {
+    html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>/, '')
+               .replace(/<% } %>/, '');
+  } else {
+    html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>[\s\S]*?<% } %>/, '');
+  }
+  res.send(html);
+});
+
 // Admin Routes
 app.get('/admin', requireAuth, requireAdmin, (req, res) => {
   res.send(adminPanelHTML);
@@ -3242,18 +3264,6 @@ app.post('/fetch-groups', requireAuth, requireApproval, async (req, res) => {
 });
 
 // Protected Routes
-app.get('/', requireAuth, requireApproval, (req, res) => {
-  let html = htmlControlPanel;
-  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
-  if (req.session.user.role === 'admin') {
-    html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>/, '')
-               .replace(/<% } %>/, '');
-  } else {
-    html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>[\s\S]*?<% } %>/, '');
-  }
-  res.send(html);
-});
-
 app.get('/task-manager', requireAuth, requireApproval, (req, res) => {
   let html = taskManagerHTML;
   html = html.replace(/<%= user\.username %>/g, req.session.user.username);
