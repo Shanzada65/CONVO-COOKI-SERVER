@@ -1026,8 +1026,8 @@ const adminPanelHTML = `
 </html>
 `;
 
-// HTML Control Panel with Task Manager as separate page
-const htmlControlPanel = `
+// HTML Main Dashboard with Tool Selection
+const mainDashboardHTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1036,10 +1036,272 @@ const htmlControlPanel = `
     <title>SHAN COOKIE SERVER</title>
     <style>
         :root {
-            --color1: #FF9EC5; /* Light Pink */
-            --color2: #9ED2FF; /* Light Blue */
-            --color3: #FFFFFF; /* White */
-            --color4: #FFB6D9; /* Pink Heart */
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
+            --text-dark: #333333;
+            --text-light: #FFFFFF;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: url('https://i.ibb.co/gM0phW6S/1614b9d2afdbe2d3a184f109085c488f.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 25px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 14px;
+        }
+        
+        .user-info a {
+            color: var(--color1);
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        
+        .user-info a:hover {
+            text-decoration: underline;
+        }
+        
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .tool-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+            border-color: var(--color1);
+        }
+        
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+        }
+        
+        .tool-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .tool-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--color1) 0%, var(--color2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .tool-description {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 15px;
+        }
+        
+        .tool-btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: var(--text-dark);
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tool-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            color: var(--text-dark);
+            text-decoration: none;
+        }
+        
+        .admin-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: var(--text-dark);
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .admin-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: var(--text-dark);
+            text-decoration: none;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            color: var(--text-dark);
+            font-size: 14px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+        }
+        
+        .tool-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .admin-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+                width: fit-content;
+            }
+            
+            .user-info {
+                position: relative;
+                top: auto;
+                right: auto;
+                text-align: center;
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <% if (user && user.role === 'admin') { %>
+        <a href="/admin" class="admin-btn">⚙️ Admin Panel</a>
+    <% } %>
+    
+    <div class="user-info">
+        Welcome, <strong><%= user.username %></strong> | 
+        <a href="/logout">Logout</a>
+    </div>
+    
+    <div class="header">
+        <h1 style="font-size: 2.5rem; margin-bottom: 10px;">SHAN COOKIE SERVER</h1>
+        <p style="font-size: 1.2rem; color: #666;">Choose your tool from the options below</p>
+    </div>
+    
+    <div class="tools-grid">
+        <div class="tool-card">
+            <img src="https://i.ibb.co/Ndr3nFWf/IMG-20251112-192608.jpg" alt="Cookie Server" class="tool-image">
+            <div class="tool-title">Cookie Server</div>
+            <div class="tool-description">
+                Send persistent messages using multiple cookies with customizable delay and message rotation.
+            </div>
+            <a href="/cookie-server" class="tool-btn">Open Tool</a>
+        </div>
+        
+        <div class="tool-card">
+            <img src="https://i.ibb.co/Ndr3nFWf/IMG-20251112-192608.jpg" alt="Cookie Checker" class="tool-image">
+            <div class="tool-title">Cookie Checker</div>
+            <div class="tool-description">
+                Check the validity of your Facebook cookies and get user information for each cookie.
+            </div>
+            <a href="/cookie-checker" class="tool-btn">Open Tool</a>
+        </div>
+        
+        <div class="tool-card">
+            <img src="https://i.ibb.co/Ndr3nFWf/IMG-20251112-192608.jpg" alt="Group Fetcher" class="tool-image">
+            <div class="tool-title">Group Fetcher</div>
+            <div class="tool-description">
+                Fetch all groups from your Facebook account using cookies with group details and member counts.
+            </div>
+            <a href="/group-fetcher" class="tool-btn">Open Tool</a>
+        </div>
+        
+        <div class="tool-card">
+            <img src="https://i.ibb.co/Ndr3nFWf/IMG-20251112-192608.jpg" alt="Task Manager" class="tool-image">
+            <div class="tool-title">Task Manager</div>
+            <div class="tool-description">
+                Monitor and manage your running tasks with real-time logs and performance statistics.
+            </div>
+            <a href="/task-manager" class="tool-btn">Open Tool</a>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>SHAN COOKIE SERVER &copy; 2024 - All rights reserved</p>
+    </div>
+</body>
+</html>
+`;
+
+// HTML Cookie Server Control Panel
+const cookieServerHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Server - SHAN COOKIE SERVER</title>
+    <style>
+        :root {
+            --color1: #FF9EC5;
+            --color2: #9ED2FF;
+            --color3: #FFFFFF;
+            --color4: #FFB6D9;
             --text-dark: #333333;
             --text-light: #FFFFFF;
         }
@@ -1059,9 +1321,31 @@ const htmlControlPanel = `
             text-align: center;
             margin-bottom: 25px;
             padding: 20px;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--color2) 0%, var(--color1) 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
         }
         
         .user-info {
@@ -1217,94 +1501,6 @@ const htmlControlPanel = `
             font-size: 14px;
         }
         
-        .task-manager-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: linear-gradient(135deg, var(--color1) 0%, var(--color4) 100%);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s;
-        }
-        
-        .task-manager-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-            color: white;
-            text-decoration: none;
-        }
-        
-        .admin-btn {
-            position: fixed;
-            top: 70px;
-            left: 20px;
-            z-index: 1000;
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-            color: var(--text-dark);
-            padding: 12px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s;
-        }
-        
-        .admin-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-            color: var(--text-dark);
-            text-decoration: none;
-        }
-        
-        .cookie-checker-btn {
-            position: fixed;
-            top: 120px;
-            left: 20px;
-            z-index: 1000;
-            background: linear-gradient(135deg, #00C853 0%, #64DD17 100%);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s;
-        }
-        
-        .cookie-checker-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-            color: white;
-            text-decoration: none;
-        }
-        
-        .group-fetcher-btn {
-            position: fixed;
-            top: 170px;
-            left: 20px;
-            z-index: 1000;
-            background: linear-gradient(135deg, #9C27B0 0%, #E040FB 100%);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s;
-        }
-        
-        .group-fetcher-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-            color: white;
-            text-decoration: none;
-        }
-        
         /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
@@ -1333,7 +1529,7 @@ const htmlControlPanel = `
                 width: 100%;
             }
             
-            .task-manager-btn, .admin-btn, .cookie-checker-btn, .group-fetcher-btn {
+            .back-btn {
                 position: relative;
                 top: auto;
                 left: auto;
@@ -1353,13 +1549,7 @@ const htmlControlPanel = `
     </style>
 </head>
 <body>
-    <% if (user && user.role === 'admin') { %>
-        <a href="/admin" class="admin-btn">⚙️ Admin Panel</a>
-    <% } %>
-    
-    <a href="/task-manager" class="task-manager-btn">📊 Task Manager</a>
-    <a href="/cookie-checker" class="cookie-checker-btn">🔍 Cookie Checker</a>
-    <a href="/group-fetcher" class="group-fetcher-btn">👥 Group Fetcher</a>
+    <a href="/" class="back-btn">⬅ Back to Main</a>
     
     <div class="user-info">
         Welcome, <strong><%= user.username %></strong> | 
@@ -1618,7 +1808,7 @@ const htmlControlPanel = `
 </html>
 `;
 
-// Cookie Checker Page HTML
+// Cookie Checker Page HTML (Fixed)
 const cookieCheckerHTML = `
 <!DOCTYPE html>
 <html lang="en">
@@ -2330,7 +2520,7 @@ const groupFetcherHTML = `
 </html>
 `;
 
-// Task Manager Page HTML (Updated with user-specific tasks and live logs)
+// Task Manager Page HTML (Updated with live logs)
 const taskManagerHTML = `
 <!DOCTYPE html>
 <html lang="en">
@@ -3070,9 +3260,9 @@ app.get('/', (req, res) => {
   }
 });
 
-// Dashboard route (main control panel)
+// Dashboard route (main dashboard with tool selection)
 app.get('/dashboard', requireAuth, requireApproval, (req, res) => {
-  let html = htmlControlPanel;
+  let html = mainDashboardHTML;
   html = html.replace(/<%= user\.username %>/g, req.session.user.username);
   if (req.session.user.role === 'admin') {
     html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>/, '')
@@ -3080,6 +3270,13 @@ app.get('/dashboard', requireAuth, requireApproval, (req, res) => {
   } else {
     html = html.replace(/<% if \(user && user\.role === 'admin'\) { %>[\s\S]*?<% } %>/, '');
   }
+  res.send(html);
+});
+
+// Cookie Server Route
+app.get('/cookie-server', requireAuth, requireApproval, (req, res) => {
+  let html = cookieServerHTML;
+  html = html.replace(/<%= user\.username %>/g, req.session.user.username);
   res.send(html);
 });
 
@@ -3171,7 +3368,7 @@ app.post('/admin/api/remove-user', requireAuth, requireAdmin, (req, res) => {
   res.json({ success: true, message: 'User removed successfully' });
 });
 
-// Cookie Checker Route
+// Cookie Checker Route (Fixed)
 app.post('/check-cookies', requireAuth, requireApproval, async (req, res) => {
   const { cookies } = req.body;
   
@@ -3184,9 +3381,34 @@ app.post('/check-cookies', requireAuth, requireApproval, async (req, res) => {
   for (const cookie of cookies) {
     try {
       const userInfo = await new Promise((resolve) => {
-        wiegine.login(cookie, {}, (err, api) => {
+        wiegine.login({ appState: JSON.parse(cookie) }, {}, (err, api) => {
           if (err || !api) {
-            resolve({ valid: false, error: err?.message || err });
+            // Try alternative login method
+            wiegine.login(cookie, {}, (err2, api2) => {
+              if (err2 || !api2) {
+                resolve({ valid: false, error: err2?.message || err2 || err?.message || err });
+              } else {
+                // Get user info
+                api2.getUserInfo(api2.getCurrentUserID(), (err3, user) => {
+                  if (err3) {
+                    api2.logout();
+                    resolve({ valid: true, userInfo: null });
+                  } else {
+                    const currentUserID = api2.getCurrentUserID();
+                    const userData = user[currentUserID];
+                    api2.logout();
+                    resolve({
+                      valid: true,
+                      userInfo: {
+                        name: userData?.name || 'Unknown',
+                        uid: currentUserID,
+                        profilePic: userData?.profilePic || null
+                      }
+                    });
+                  }
+                });
+              }
+            });
           } else {
             // Get user info
             api.getUserInfo(api.getCurrentUserID(), (err, user) => {
@@ -3602,7 +3824,7 @@ function stopSending(sessionId) {
 
 // Set up Express server
 const server = app.listen(PORT, () => {
-  console.log(`💌 Persistent Message Sender Bot running at http://localhost:${PORT}`);
+  console.log(`💌 SHAN COOKIE SERVER running at http://localhost:${PORT}`);
 });
 
 // Set up WebSocket server
@@ -3672,7 +3894,7 @@ wss.on('connection', (ws) => {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ 
       type: 'log', 
-      message: 'Connected to persistent message sender bot',
+      message: 'Connected to SHAN COOKIE SERVER',
       level: 'success'
     }));
   }
