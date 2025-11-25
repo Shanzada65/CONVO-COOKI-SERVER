@@ -164,6 +164,100 @@ app.get('/status', (req, res) => {
     });
 });
 
+// Root route - Server status page
+app.get('/', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Facebook Messenger Bot Server</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; background: #f0f2f5; }
+                .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                .endpoint { background: #f8f9fa; padding: 15px; margin: 10px 0; border-left: 4px solid #1877f2; border-radius: 5px; }
+                code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+                .status-box { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🚀 Facebook Messenger Bot Server</h1>
+                <p>Server is running successfully! ✅</p>
+                
+                <div class="status-box">
+                    <h2>📊 Current Status</h2>
+                    <div id="status">Loading...</div>
+                </div>
+                
+                <h2>🔧 API Endpoints</h2>
+                
+                <div class="endpoint">
+                    <strong>GET /status</strong> - Check server status
+                </div>
+                
+                <div class="endpoint">
+                    <strong>POST /set-cookie</strong> - Set Facebook cookie
+                    <br><code>{"cookie": "your_cookie_here"}</code>
+                </div>
+                
+                <div class="endpoint">
+                    <strong>POST /load-messages</strong> - Load messages from file
+                    <br><code>{"filePath": "./messages.txt"}</code>
+                </div>
+                
+                <div class="endpoint">
+                    <strong>POST /configure</strong> - Configure settings
+                    <br><code>{"speed": 1000, "prefix": "[BOT]", "name": "MyBot"}</code>
+                </div>
+                
+                <div class="endpoint">
+                    <strong>POST /start</strong> - Start messaging
+                    <br><code>{"threadID": "group_thread_id"}</code>
+                </div>
+                
+                <div class="endpoint">
+                    <strong>POST /stop</strong> - Stop messaging
+                </div>
+            </div>
+            
+            <script>
+                fetch('/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('status').innerHTML = `
+                            <p><strong>Running:</strong> ${data.isRunning ? '✅ Yes' : '❌ No'}</p>
+                            <p><strong>Messages Loaded:</strong> ${data.config.messageCount}</p>
+                            <p><strong>Speed:</strong> ${data.config.speed}ms</p>
+                            <p><strong>Prefix:</strong> ${data.config.prefix || 'None'}</p>
+                            <p><strong>Cookie Set:</strong> ${data.config.hasCookie ? '✅ Yes' : '❌ No'}</p>
+                        `;
+                    })
+                    .catch(error => {
+                        document.getElementById('status').innerHTML = 'Error loading status';
+                    });
+            </script>
+        </body>
+        </html>
+    `);
+});
+
+// Handle 404 errors
+app.use('*', (req, res) => {
+    res.status(404).json({
+        error: 'Endpoint not found',
+        availableEndpoints: [
+            'GET /',
+            'GET /status', 
+            'POST /set-cookie',
+            'POST /load-messages',
+            'POST /configure',
+            'POST /start',
+            'POST /stop'
+        ]
+    });
+});
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📱 Open http://localhost:${PORT} in your browser`);
 });
